@@ -163,6 +163,12 @@ class ProjectApi(unittest.TestCase):
         r = self.c.post("/api/jobs", data={"transcript": "hello there", "project": "ghost"}, headers=self.h)
         self.assertEqual(r.status_code, 404)
 
+    def test_setup_page_and_menu(self):
+        r = self.c.get("/setup")
+        self.assertEqual(r.status_code, 200)
+        self.assertIn("setup guide", r.text.lower())
+        self.assertIn('href="/setup"', self.c.get("/").text)
+
     def test_capabilities_report_storage(self):
         self.assertTrue(self.c.get("/healthz").json()["azure_storage"])
 

@@ -174,6 +174,17 @@ details summary { cursor: pointer; font-weight: 600; font-size: 14px; margin-bot
     <span class="rec"><i></i>nothing is uploaded</span>
   </header>
 
+  <nav class="site-menu" aria-label="Site">
+    <a href="/" aria-current="page">🎬 Analyzer</a>
+    <a href="/setup">🧭 Setup guide</a>
+    <a href="https://github.com/rifaterdemsahin/reverse-any-video" target="_blank" rel="noopener">🐙 Source</a>
+  </nav>
+  <style>
+    .site-menu { display: flex; flex-wrap: wrap; gap: 8px; margin: 4px 0 18px }
+    .site-menu a { padding: 7px 14px; border: 1px solid currentColor; border-radius: 999px; text-decoration: none; color: inherit; opacity: .85 }
+    .site-menu a[aria-current="page"], .site-menu a:hover { opacity: 1; font-weight: 600 }
+  </style>
+
   <section class="base" aria-labelledby="base-title">
     <img src="thumbnail.jpg" alt="Thumbnail of the base video: /reverse-any-video, free skill">
     <div>

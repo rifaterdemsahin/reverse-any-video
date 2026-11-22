@@ -1,0 +1,324 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="claude:viewport-fit-sides" content="cover">
+<title>Reverse Any Video Setup Guide</title>
+<style>
+:root {
+  --bg: #f7f6f2; --fg: #1d1d1b; --muted: #5d5b55; --rule: #dcd9cf;
+  --card: #ffffff; --accent: #0f6e5c; --code-bg: #1e2321; --code-fg: #e9f1ee; --warn: #8a4b00;
+  --sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: ui-monospace, Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #121412; --fg: #ecebe6; --muted: #aeaca3; --rule: #2e332f;
+    --card: #1a1d1b; --accent: #5fd0b5; --code-bg: #0b0d0c; --code-fg: #d7e6e0; --warn: #f0b36a;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #121412; --fg: #ecebe6; --muted: #aeaca3; --rule: #2e332f;
+  --card: #1a1d1b; --accent: #5fd0b5; --code-bg: #0b0d0c; --code-fg: #d7e6e0; --warn: #f0b36a;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0; background: var(--bg); color: var(--fg); font: 16px/1.6 var(--sans);
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 32px;
+}
+main { max-width: 780px; margin: 0 auto; }
+h1 { font-size: clamp(1.8rem, 5vw, 2.6rem); line-height: 1.15; margin: 0 0 .5rem; text-wrap: balance; }
+h2 { font-size: 1.35rem; margin: 2.5rem 0 .75rem; padding-top: 1rem; border-top: 1px solid var(--rule); }
+h3 { margin: 0 0 .4rem; font-size: 1.05rem; }
+p, li { max-width: 65ch; }
+.lede { color: var(--muted); font-size: 1.05rem; }
+.step { background: var(--card); border: 1px solid var(--rule); border-radius: 10px; padding: 18px; margin: 16px 0; }
+.num { color: var(--accent); font: 600 .8rem var(--mono); letter-spacing: .06em; text-transform: uppercase; }
+pre {
+  background: var(--code-bg); color: var(--code-fg); padding: 12px 14px; border-radius: 8px;
+  overflow-x: auto; font: 13px/1.5 var(--mono); margin: 10px 0 0; white-space: pre;
+}
+code { font-family: var(--mono); font-size: .92em; }
+.check { color: var(--muted); font-size: .95rem; margin-top: 10px; }
+.check strong { color: var(--accent); }
+.warn { color: var(--warn); }
+table { width: 100%; border-collapse: collapse; font-size: .95rem; display: block; overflow-x: auto; }
+th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--rule); vertical-align: top; }
+th { color: var(--muted); font-weight: 600; }
+a { color: var(--accent); }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.site-menu { display: flex; flex-wrap: wrap; gap: 8px; max-width: 780px; margin: 0 auto 18px }
+.site-menu a { padding: 7px 14px; border: 1px solid var(--rule); border-radius: 999px; text-decoration: none; color: var(--fg) }
+.site-menu a[aria-current="page"], .site-menu a:hover { border-color: var(--accent); color: var(--accent); font-weight: 600 }
+/* Platform switch: body[data-os] decides which blocks show. Default is macOS. */
+.switch { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0 4px; }
+.switch button {
+  font: inherit; color: var(--fg); background: var(--card); border: 1px solid var(--rule);
+  border-radius: 999px; padding: 8px 16px; cursor: pointer;
+}
+.switch button[aria-pressed="true"] { border-color: var(--accent); color: var(--accent); font-weight: 600; }
+body[data-os="mac"] [data-os]:not([data-os="mac"]),
+body[data-os="windows"] [data-os]:not([data-os="windows"]),
+body[data-os="linux"] [data-os]:not([data-os="linux"]) { display: none; }
+.tip { font-size: .92rem; color: var(--muted); margin-top: 8px; }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body data-os="mac">
+<nav class="site-menu" aria-label="Site">
+  <a href="/">🎬 Analyzer</a>
+  <a href="/setup" aria-current="page">🧭 Setup guide</a>
+  <a href="https://github.com/rifaterdemsahin/reverse-any-video" target="_blank" rel="noopener">🐙 Source</a>
+</nav>
+<main>
+  <h1>🚀 Reverse Any Video: setup guide</h1>
+  <p class="lede">
+    This guide takes you from a clean computer to a running copy of the app. The app analyses a video's script
+    and editing style, then saves each result into a project folder in Azure Blob Storage. Replace every
+    <code>&lt;placeholder&gt;</code> with your own name. Never paste a secret into chat, a file or the repo. 🔒
+  </p>
+
+  <h2>🎯 What you will have at the end</h2>
+  <ul>
+    <li>🌐 The app running on Fly.io at a URL you choose.</li>
+    <li>🪣 A private storage account in Azure with one container, <code>reverse-any-video</code>.</li>
+    <li>🔐 Secrets kept in Azure Key Vault. The app reads them when it starts.</li>
+    <li>📁 Projects you create in the app. Each project is a folder, and each analysis is saved into it.</li>
+  </ul>
+
+  <h2>💻 Choose your computer</h2>
+  <p>Pick your system. Every command in the steps below changes to match.</p>
+  <div class="switch" role="group" aria-label="Operating system">
+    <button type="button" data-pick="mac" aria-pressed="true">🍎 macOS</button>
+    <button type="button" data-pick="windows" aria-pressed="false">🪟 Windows</button>
+    <button type="button" data-pick="linux" aria-pressed="false">🐧 Linux</button>
+  </div>
+  <p class="tip">macOS commands use Terminal (zsh). Windows commands use PowerShell. Linux commands use bash.</p>
+
+  <h2>🧰 Before you start</h2>
+  <table>
+    <tr><th>You need</th><th>Why</th></tr>
+    <tr><td>🐙 Git and a copy of this repository</td><td>The app code and the Dockerfile.</td></tr>
+    <tr><td>🪰 Fly.io account and <code>flyctl</code></td><td>Hosts the app.</td></tr>
+    <tr><td>☁️ Azure subscription where you are Owner</td><td>Creates the storage account and service principal.</td></tr>
+    <tr><td>🛠️ Azure CLI (<code>az</code>)</td><td>Runs the Azure steps.</td></tr>
+    <tr><td>🔑 Azure Key Vault you can write to</td><td>Holds the storage connection string and the app's client secret.</td></tr>
+    <tr><td>🐍 Python 3.10 or newer</td><td>Runs the tests and the analyser on your computer.</td></tr>
+    <tr><td>🎞️ ffmpeg</td><td>Detects cuts in the video. The tests and the analyser need it.</td></tr>
+  </table>
+
+  <section class="step" data-os="mac">
+    <div class="num">🍎 macOS · install</div>
+    <pre>brew install git flyctl azure-cli python@3.12 ffmpeg
+fly auth login
+az login</pre>
+    <div class="check"><strong>Check:</strong> <code>fly version</code>, <code>az version</code> and <code>ffmpeg -version</code> each print a version number.</div>
+  </section>
+
+  <section class="step" data-os="windows">
+    <div class="num">🪟 Windows · install</div>
+    <p>Open PowerShell and run these one at a time. Close and reopen PowerShell after the installs.</p>
+    <pre>winget install -e --id Git.Git
+winget install -e --id Fly.flyctl
+winget install -e --id Microsoft.AzureCLI
+winget install -e --id Python.Python.3.12
+winget install -e --id Gyan.FFmpeg
+fly auth login
+az login</pre>
+    <div class="check"><strong>Check:</strong> <code>fly version</code>, <code>az version</code> and <code>ffmpeg -version</code> each print a version number.</div>
+  </section>
+
+  <section class="step" data-os="linux">
+    <div class="num">🐧 Linux · install</div>
+    <p>These commands are for Debian and Ubuntu. On Fedora, use <code>dnf</code> in place of <code>apt</code>. Any Linux distribution with Homebrew also works with the macOS commands.</p>
+    <pre>sudo apt update
+sudo apt install -y git python3 python3-venv ffmpeg xclip curl openssl
+curl -L https://fly.io/install.sh | sh          # then add ~/.fly/bin to your PATH
+curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash
+fly auth login
+az login</pre>
+    <div class="check"><strong>Check:</strong> <code>fly version</code>, <code>az version</code> and <code>ffmpeg -version</code> each print a version number.</div>
+  </section>
+
+  <h2>🪜 The steps</h2>
+
+  <section class="step">
+    <div class="num">📥 Step 1 · get the code and run the tests</div>
+    <pre data-os="mac">git clone https://github.com/rifaterdemsahin/reverse-any-video.git
+cd reverse-any-video
+python3 -m venv .venv && source .venv/bin/activate
+pip install -r requirements-dev.txt
+python -m unittest discover -s tests -v</pre>
+    <pre data-os="linux">git clone https://github.com/rifaterdemsahin/reverse-any-video.git
+cd reverse-any-video
+python3 -m venv .venv && source .venv/bin/activate
+pip install -r requirements-dev.txt
+python -m unittest discover -s tests -v</pre>
+    <pre data-os="windows">git clone https://github.com/rifaterdemsahin/reverse-any-video.git
+cd reverse-any-video
+py -3.12 -m venv .venv
+.\.venv\Scripts\Activate.ps1      # if scripts are blocked: Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
+pip install -r requirements-dev.txt
+python -m unittest discover -s tests -v</pre>
+    <div class="check"><strong>Check:</strong> the run ends with <code>OK</code>. Some tests are skipped when the web test client is missing. That is expected.</div>
+  </section>
+
+  <section class="step">
+    <div class="num">🪣 Step 2 · create the storage account and container</div>
+    <p>Choose names first. The storage account name must be 3 to 24 lowercase letters and digits, and unique across Azure.</p>
+    <pre data-os="mac">az login
+RG=&lt;your-resource-group&gt;; SA=&lt;your-storage-account&gt;; LOC=uksouth; CT=reverse-any-video
+az storage account create -n $SA -g $RG -l $LOC --sku Standard_LRS --kind StorageV2 --min-tls-version TLS1_2 --allow-blob-public-access false -o none
+az storage container create -n $CT --account-name $SA --auth-mode login -o none</pre>
+    <pre data-os="linux">az login
+RG=&lt;your-resource-group&gt;; SA=&lt;your-storage-account&gt;; LOC=uksouth; CT=reverse-any-video
+az storage account create -n $SA -g $RG -l $LOC --sku Standard_LRS --kind StorageV2 --min-tls-version TLS1_2 --allow-blob-public-access false -o none
+az storage container create -n $CT --account-name $SA --auth-mode login -o none</pre>
+    <pre data-os="windows">az login
+$RG = "&lt;your-resource-group&gt;"; $SA = "&lt;your-storage-account&gt;"; $LOC = "uksouth"; $CT = "reverse-any-video"
+az storage account create -n $SA -g $RG -l $LOC --sku Standard_LRS --kind StorageV2 --min-tls-version TLS1_2 --allow-blob-public-access false -o none
+az storage container create -n $CT --account-name $SA --auth-mode login -o none</pre>
+    <div class="check"><strong>Check:</strong> <code>az storage container list --account-name $SA --auth-mode login --query "[].name" -o tsv</code> prints <code>reverse-any-video</code>.</div>
+  </section>
+
+  <section class="step">
+    <div class="num">🔐 Step 3 · store the connection string in Key Vault</div>
+    <p>The value goes straight from Azure into the vault and is never printed.</p>
+    <pre data-os="mac">KV=&lt;your-key-vault&gt;
+az keyvault secret set --vault-name $KV --name reverse-any-video-storage-connection-string \
+  --value "$(az storage account show-connection-string -n $SA -g $RG -o tsv)" -o none</pre>
+    <pre data-os="linux">KV=&lt;your-key-vault&gt;
+az keyvault secret set --vault-name $KV --name reverse-any-video-storage-connection-string \
+  --value "$(az storage account show-connection-string -n $SA -g $RG -o tsv)" -o none</pre>
+    <pre data-os="windows">$KV = "&lt;your-key-vault&gt;"
+az keyvault secret set --vault-name $KV --name reverse-any-video-storage-connection-string --value (az storage account show-connection-string -n $SA -g $RG -o tsv) -o none</pre>
+    <div class="check"><strong>Check:</strong> <code>az keyvault secret list --vault-name $KV --query "[?contains(name,'reverse-any-video')].name" -o tsv</code> lists the secret name.</div>
+  </section>
+
+  <section class="step">
+    <div class="num">🤖 Step 4 · create the app's service principal</div>
+    <p>The principal may write to this one storage account and nothing else. Its password goes into Key Vault, not onto the screen.</p>
+    <pre data-os="mac">SP=$(az ad sp create-for-rbac -n reverse-any-video-app --role "Storage Blob Data Contributor" \
+  --scopes $(az storage account show -n $SA -g $RG --query id -o tsv) -o json)
+APPID=$(python3 -c 'import json,sys;print(json.load(sys.stdin)["appId"])' &lt;&lt;&lt;"$SP")
+TENANT=$(python3 -c 'import json,sys;print(json.load(sys.stdin)["tenant"])' &lt;&lt;&lt;"$SP")
+az keyvault secret set --vault-name $KV --name reverse-any-video-app-client-secret \
+  --value "$(python3 -c 'import json,sys;print(json.load(sys.stdin)["password"])' &lt;&lt;&lt;"$SP")" -o none
+az keyvault set-policy -n $KV --spn $APPID --secret-permissions get list -o none</pre>
+    <pre data-os="linux">SP=$(az ad sp create-for-rbac -n reverse-any-video-app --role "Storage Blob Data Contributor" \
+  --scopes $(az storage account show -n $SA -g $RG --query id -o tsv) -o json)
+APPID=$(python3 -c 'import json,sys;print(json.load(sys.stdin)["appId"])' &lt;&lt;&lt;"$SP")
+TENANT=$(python3 -c 'import json,sys;print(json.load(sys.stdin)["tenant"])' &lt;&lt;&lt;"$SP")
+az keyvault secret set --vault-name $KV --name reverse-any-video-app-client-secret \
+  --value "$(python3 -c 'import json,sys;print(json.load(sys.stdin)["password"])' &lt;&lt;&lt;"$SP")" -o none
+az keyvault set-policy -n $KV --spn $APPID --secret-permissions get list -o none</pre>
+    <pre data-os="windows">$SP = az ad sp create-for-rbac -n reverse-any-video-app --role "Storage Blob Data Contributor" --scopes (az storage account show -n $SA -g $RG --query id -o tsv) -o json | ConvertFrom-Json
+$APPID = $SP.appId; $TENANT = $SP.tenant
+az keyvault secret set --vault-name $KV --name reverse-any-video-app-client-secret --value $SP.password -o none
+az keyvault set-policy -n $KV --spn $APPID --secret-permissions get list -o none</pre>
+    <div class="check"><strong>Check:</strong> the commands finish without an error. Your Azure admin may need to approve the principal's creation.</div>
+  </section>
+
+  <section class="step">
+    <div class="num">⚙️ Step 5 · point the Fly app at Key Vault</div>
+    <p>The app is named <code>reverse-any-video</code> in <code>fly.toml</code>. If you change the name, change it in the command too.</p>
+    <pre data-os="mac">fly secrets set --stage --app reverse-any-video \
+  AZURE_KEYVAULT_URL=https://$KV.vault.azure.net/ AZURE_TENANT_ID=$TENANT AZURE_CLIENT_ID=$APPID \
+  AZURE_CLIENT_SECRET="$(az keyvault secret show --vault-name $KV --name reverse-any-video-app-client-secret --query value -o tsv)"</pre>
+    <pre data-os="linux">fly secrets set --stage --app reverse-any-video \
+  AZURE_KEYVAULT_URL=https://$KV.vault.azure.net/ AZURE_TENANT_ID=$TENANT AZURE_CLIENT_ID=$APPID \
+  AZURE_CLIENT_SECRET="$(az keyvault secret show --vault-name $KV --name reverse-any-video-app-client-secret --query value -o tsv)"</pre>
+    <pre data-os="windows">$AZ_SECRET = az keyvault secret show --vault-name $KV --name reverse-any-video-app-client-secret --query value -o tsv
+fly secrets set --stage --app reverse-any-video "AZURE_KEYVAULT_URL=https://$KV.vault.azure.net/" "AZURE_TENANT_ID=$TENANT" "AZURE_CLIENT_ID=$APPID" "AZURE_CLIENT_SECRET=$AZ_SECRET"</pre>
+    <div class="check"><strong>Check:</strong> <code>fly secrets list --app reverse-any-video</code> shows the four <code>AZURE_*</code> names. The values stay hidden.</div>
+  </section>
+
+  <section class="step">
+    <div class="num">🔑 Step 6 · create the access token</div>
+    <p class="warn">⚠️ Without a token, anyone who finds the URL can create projects and start jobs. Those writes go to your storage account. Set one before you share the link.</p>
+    <pre data-os="mac">TOKEN=$(openssl rand -hex 24); echo "$TOKEN" | pbcopy     # the token is now on your clipboard
+fly secrets set --stage --app reverse-any-video ACCESS_TOKEN="$TOKEN"</pre>
+    <pre data-os="linux">TOKEN=$(openssl rand -hex 24); echo "$TOKEN" | (wl-copy 2>/dev/null || xclip -selection clipboard)
+fly secrets set --stage --app reverse-any-video ACCESS_TOKEN="$TOKEN"</pre>
+    <pre data-os="windows">$bytes = New-Object byte[] 24
+[System.Security.Cryptography.RandomNumberGenerator]::Create().GetBytes($bytes)
+$TOKEN = -join ($bytes | ForEach-Object { $_.ToString("x2") })
+Set-Clipboard $TOKEN                       # the token is now on your clipboard
+fly secrets set --stage --app reverse-any-video "ACCESS_TOKEN=$TOKEN"</pre>
+    <div class="check">Keep a copy in your password manager. Give the token only to people who should create projects.</div>
+  </section>
+
+  <section class="step">
+    <div class="num">🚀 Step 7 · deploy and check</div>
+    <p>The same on every system. Run it from the <code>reverse-any-video</code> folder.</p>
+    <pre>fly deploy --ha=false</pre>
+    <div class="check"><strong>Check:</strong> the deploy ends with <em>Visit your newly deployed app</em>. Then the health check shows <code>azure_storage</code> as <code>true</code>.</div>
+    <pre data-os="mac">curl -s https://&lt;your-app&gt;.fly.dev/healthz | python3 -m json.tool</pre>
+    <pre data-os="linux">curl -s https://&lt;your-app&gt;.fly.dev/healthz | python3 -m json.tool</pre>
+    <pre data-os="windows">(curl.exe -s https://&lt;your-app&gt;.fly.dev/healthz | ConvertFrom-Json).azure_storage</pre>
+  </section>
+
+  <section class="step">
+    <div class="num">📁 Step 8 · create a project and run the first analysis</div>
+    <p>First load the token from your clipboard into this terminal. Do not type the word <code>TOKEN</code> into the command, paste the real value.</p>
+    <pre data-os="mac">export TOKEN=$(pbpaste)</pre>
+    <pre data-os="linux">export TOKEN=$(wl-paste 2>/dev/null || xclip -o -selection clipboard)</pre>
+    <pre data-os="windows">$TOKEN = Get-Clipboard</pre>
+    <p>Then create the project and start the analysis. On Windows, use <code>curl.exe</code>, because PowerShell's <code>curl</code> is a different command.</p>
+    <pre data-os="mac">curl -H "X-Access-Token: $TOKEN" -F name="First test" https://&lt;your-app&gt;.fly.dev/api/projects
+curl -H "X-Access-Token: $TOKEN" -F url="https://www.youtube.com/watch?v=KnqTiAXUH7M" -F download=true -F project=first-test https://&lt;your-app&gt;.fly.dev/api/jobs</pre>
+    <pre data-os="linux">curl -H "X-Access-Token: $TOKEN" -F name="First test" https://&lt;your-app&gt;.fly.dev/api/projects
+curl -H "X-Access-Token: $TOKEN" -F url="https://www.youtube.com/watch?v=KnqTiAXUH7M" -F download=true -F project=first-test https://&lt;your-app&gt;.fly.dev/api/jobs</pre>
+    <pre data-os="windows">curl.exe -H "X-Access-Token: $TOKEN" -F name="First test" https://&lt;your-app&gt;.fly.dev/api/projects
+curl.exe -H "X-Access-Token: $TOKEN" -F url="https://www.youtube.com/watch?v=KnqTiAXUH7M" -F download=true -F project=first-test https://&lt;your-app&gt;.fly.dev/api/jobs</pre>
+    <div class="check"><strong>Check:</strong> the second call returns an <code>id</code>. Open <code>https://&lt;your-app&gt;.fly.dev/api/jobs/&lt;id&gt;</code> until <code>status</code> is <code>done</code>. The outputs are then in the container at <code>projects/first-test/jobs/&lt;id&gt;/</code>.</div>
+  </section>
+
+  <h2>🛟 If something goes wrong</h2>
+  <table>
+    <tr><th>You see</th><th>Likely cause and fix</th></tr>
+    <tr><td><code>{"error":"Missing or wrong X-Access-Token."}</code></td><td>The token is missing or wrong. The most common cause is typing placeholder text instead of the token. Run the Step 8 load command again, then retry. Check with <code>echo ${#TOKEN}</code> (macOS and Linux) or <code>$TOKEN.Length</code> (Windows): it should be 48.</td></tr>
+    <tr><td><code>Failed to execute 'json' on 'Response': Unexpected end of JSON input</code> in the browser</td><td>The server returned nothing, usually because the app crashed on start. Run <code>fly logs --app &lt;your-app&gt;</code>. A missing file in the Docker image is the usual cause: check that the <code>COPY</code> line in the Dockerfile lists every <code>.py</code> file the server imports.</td></tr>
+    <tr><td><code>"azure_storage": false</code> in <code>/healthz</code></td><td>The four <code>AZURE_*</code> secrets are missing. Redo Step 5, then Step 7.</td></tr>
+    <tr><td>HTTP 503 on <code>/api/projects</code></td><td>Storage is not configured. Same fix as above.</td></tr>
+    <tr><td>HTTP 409 when creating a project</td><td>A project with that name already exists. Use a different name.</td></tr>
+    <tr><td>Job fails with a YouTube sign-in message</td><td>YouTube is asking the server to prove it is not a bot. Export <code>cookies.txt</code> from a spare browser account and run <code>fly secrets set YT_COOKIES="$(cat cookies.txt)" --app &lt;your-app&gt;</code>. On Windows, use <code>Get-Content cookies.txt -Raw</code> in place of <code>$(cat cookies.txt)</code>.</td></tr>
+    <tr><td><code>ModuleNotFoundError: No module named 'httpx2'</code> when running the tests</td><td>The newer web test client needs one more package. Run <code>pip install httpx2</code> in the virtual environment.</td></tr>
+    <tr><td><code>ffmpeg: command not found</code></td><td>Install ffmpeg with the Step install commands for your system, then open a new terminal.</td></tr>
+    <tr><td>Windows: <code>running scripts is disabled on this system</code></td><td>Run <code>Set-ExecutionPolicy -Scope CurrentUser RemoteSigned</code>, then activate the environment again.</td></tr>
+    <tr><td>Fly machine stopped and will not start</td><td>Run <code>fly logs --app &lt;your-app&gt;</code>, fix the cause, then Step 7. Fly stops retrying after a few restarts.</td></tr>
+  </table>
+
+  <h2>🧹 Clean up</h2>
+  <p>To remove everything: <code>fly apps destroy &lt;your-app&gt;</code>, delete the service principal and its Key Vault secrets, and delete the storage account. Deleting the storage account removes every saved output.</p>
+
+  <h2>🗂️ Where things are in the repo</h2>
+  <table>
+    <tr><th>File</th><th>What it does</th></tr>
+    <tr><td><code>server.py</code></td><td>The web API: analyses, projects, plans and renders.</td></tr>
+    <tr><td><code>storage.py</code></td><td>Reads the connection string from Key Vault and saves outputs to the project folders.</td></tr>
+    <tr><td><code>reverse_video.py</code></td><td>The analyser. It runs on the standard library and ffmpeg.</td></tr>
+    <tr><td><code>create_video.py</code></td><td>Writes a new script in the measured style and renders it.</td></tr>
+    <tr><td><code>Dockerfile</code></td><td>Builds the image. Every module the server imports must be copied here.</td></tr>
+    <tr><td><code>docs/azure-setup.md</code></td><td>The Azure resource record and the verify commands.</td></tr>
+  </table>
+</main>
+<script>
+  // Switch the platform. The buttons set data-os on <body>, and the CSS shows the matching blocks.
+  document.querySelectorAll("[data-pick]").forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      document.body.setAttribute("data-os", btn.getAttribute("data-pick"));
+      document.querySelectorAll("[data-pick]").forEach(function (b) {
+        b.setAttribute("aria-pressed", String(b === btn));
+      });
+    });
+  });
+</script>
+</body>
+</html>

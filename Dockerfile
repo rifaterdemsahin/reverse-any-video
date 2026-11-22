@@ -14,7 +14,7 @@ COPY requirements.txt .
 RUN pip install -r requirements.txt
 
 COPY reverse_video.py create_video.py server.py storage.py ./
-COPY docs/index.html docs/thumbnail.jpg ./docs/
+COPY docs/index.html docs/setup.html docs/thumbnail.jpg ./docs/
 
 RUN useradd --create-home --uid 10001 app && mkdir -p /tmp/rav-jobs && chown app /tmp/rav-jobs
 USER app

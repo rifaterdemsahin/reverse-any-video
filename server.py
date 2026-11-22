@@ -381,6 +381,11 @@ def index():
     return FileResponse(DOCS / "index.html", media_type="text/html")
 
 
+@app.get("/setup")
+def setup_guide():
+    return FileResponse(DOCS / "setup.html", media_type="text/html")
+
+
 @app.get("/thumbnail.jpg")
 def thumbnail():
     return FileResponse(DOCS / "thumbnail.jpg", media_type="image/jpeg")
