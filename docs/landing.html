@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="claude:viewport-fit-sides" content="cover">
+<title>Reverse Any Video</title>
+<meta name="description" content="Paste a video link. Get its structure, storyboard, edit list and a HyperFrames template to make your own video in the same style.">
+<style>
+:root {
+  --bg: #f7f6f2; --fg: #1d1d1b; --muted: #5d5b55; --rule: #dcd9cf; --card: #fff; --accent: #0f6e5c; --warn: #8a4b00;
+  --sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif; --mono: ui-monospace, Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) { --bg: #121412; --fg: #ecebe6; --muted: #aeaca3; --rule: #2e332f; --card: #1a1d1b; --accent: #5fd0b5; --warn: #f0b36a; color-scheme: dark; }
+}
+:root[data-theme="dark"] { --bg: #121412; --fg: #ecebe6; --muted: #aeaca3; --rule: #2e332f; --card: #1a1d1b; --accent: #5fd0b5; --warn: #f0b36a; color-scheme: dark; }
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--fg); font: 17px/1.6 var(--sans);
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 28px; }
+main { max-width: 900px; margin: 0 auto; }
+h1 { font-size: clamp(2rem, 6vw, 3.2rem); line-height: 1.1; margin: 0 0 .6rem; text-wrap: balance; }
+h2 { font-size: 1.4rem; margin: 2.4rem 0 .8rem; }
+.lede { color: var(--muted); font-size: 1.15rem; max-width: 60ch; }
+.menu { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 28px; }
+.menu a { padding: 7px 14px; border: 1px solid var(--rule); border-radius: 999px; text-decoration: none; color: var(--fg); }
+.menu a[aria-current="page"], .menu a:hover { border-color: var(--accent); color: var(--accent); font-weight: 600; }
+.cta { display: flex; flex-wrap: wrap; gap: 12px; margin: 22px 0 6px; }
+.btn { display: inline-block; padding: 12px 20px; border-radius: 8px; background: var(--accent); color: #fff; text-decoration: none; font-weight: 600; }
+.btn.ghost { background: transparent; color: var(--accent); border: 1px solid var(--accent); }
+.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; }
+.card { background: var(--card); border: 1px solid var(--rule); border-radius: 10px; padding: 18px; }
+.card b { display: block; margin-bottom: 4px; }
+.muted { color: var(--muted); font-size: .95rem; }
+ol.steps { padding-left: 1.2rem; }
+ol.steps li { margin: .5rem 0; max-width: 62ch; }
+table { width: 100%; border-collapse: collapse; font-size: .95rem; }
+th, td { text-align: left; padding: 8px 6px; border-bottom: 1px solid var(--rule); vertical-align: top; }
+.tag { font-family: var(--mono); font-size: .8rem; color: var(--warn); }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+</style>
+</head>
+<body>
+<main>
+  <nav class="menu" aria-label="Site">
+    <a href="/landing" aria-current="page">🏠 Home</a>
+    <a href="/">🎬 Analyzer</a>
+    <a href="/pricing">💷 Pricing</a>
+    <a href="/setup">🧭 Setup guide</a>
+    <a href="https://github.com/rifaterdemsahin/reverse-any-video" target="_blank" rel="noopener">🐙 Source</a>
+  </nav>
+
+  <h1>🎞️ Turn any video link into a blueprint for your own video</h1>
+  <p class="lede">Paste a video link. We measure how it is built: its structure, pacing, shots and cut rhythm. You get a storyboard, an edit decision list and a HyperFrames template you can fill with your own content and render.</p>
+  <div class="cta">
+    <a class="btn" href="/pricing">💷 See the price for my video</a>
+    <a class="btn ghost" href="/">🎬 Try the analyzer</a>
+  </div>
+
+  <h2>📦 What you get</h2>
+  <div class="grid">
+    <div class="card"><b>📋 Storyboard</b><span class="muted">One panel per shot: what is on screen, camera, and whether there is speech. Never the words spoken.</span></div>
+    <div class="card"><b>✂️ Edit decision list</b><span class="muted">A standard CMX 3600 EDL with one event per shot, for any editor.</span></div>
+    <div class="card"><b>📊 Metrics</b><span class="muted">Length, pace, cut rate, shot length and hook timing as numbers.</span></div>
+    <div class="card"><b>🎬 HyperFrames template</b><span class="muted">A plan and prompts with placeholders for your own headlines, narration and title.</span></div>
+  </div>
+
+  <h2>🛡️ What we do not deliver</h2>
+  <p class="muted">We do not send the source video, its frames, or its transcript. We keep them only while we work on your order, and we delete them after a month. The output is analysis and structure, written in our own words, so you build your own video.</p>
+
+  <h2>🪜 How it works</h2>
+  <ol class="steps">
+    <li><b>Paste the link</b> or upload your own video file. Uploads give the full shot analysis. Links give captions and timing only.</li>
+    <li><b>See the price</b> on the <a href="/pricing">pricing page</a>. It shows every cost line: AI, Fly.io compute and Azure storage, plus a 10% margin. There is no minimum.</li>
+    <li><b>Pay by card</b> through Stripe. <span class="tag">coming soon: test mode first</span></li>
+    <li><b>Get the email</b> with your deliverables when the analysis finishes. <span class="tag">coming soon</span></li>
+    <li><b>Render your video</b> by giving the HyperFrames template and your content to HyperFrames.</li>
+  </ol>
+
+  <h2>❓ Questions</h2>
+  <table>
+    <tr><th>Question</th><th>Answer</th></tr>
+    <tr><td>Do you download YouTube videos?</td><td>No. Links are read for captions and timing. Full analysis needs an upload you have the rights to.</td></tr>
+    <tr><td>Do I get the original video or frames?</td><td>No. They are kept for our processing and deleted after one month.</td></tr>
+    <tr><td>Is there a minimum charge?</td><td>No.</td></tr>
+    <tr><td>Where is my email used?</td><td>Only to send your deliverables. See the privacy notice when checkout opens.</td></tr>
+  </table>
+</main>
+</body>
+</html>

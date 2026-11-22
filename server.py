@@ -402,6 +402,11 @@ def quote(duration_s: float = 0, transcript_chars: int | None = None, shots: int
     return pricing.quote(pricing.estimate(duration_s, transcript_chars, shots, storyboard))
 
 
+@app.get("/landing")
+def landing():
+    return FileResponse(DOCS / "landing.html", media_type="text/html")
+
+
 @app.get("/pricing")
 def pricing_page():
     return FileResponse(DOCS / "pricing.html", media_type="text/html")
