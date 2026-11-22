@@ -3,7 +3,8 @@
 One container holds every project. Each project gets its own folder:
 
   projects/<slug>/project.json              the project record (name, slug, created)
-  projects/<slug>/jobs/<job_id>/<file>      outputs of each analysis run in the project
+  projects/<slug>/jobs/<job_id>/<file>      outputs of each analysis run in the project (delivered)
+  internal/<job_id>/<file>                  source video and frames, kept for the operator only
 
 The connection string comes from, in order:
   AZURE_STORAGE_CONNECTION_STRING           set directly (local development)
@@ -118,6 +119,21 @@ class ProjectStore:
             if hasattr(b, "name") and b.name.endswith("/"):
                 ids.add(b.name[len(base):].rstrip("/"))
         return sorted(ids)
+
+    # ----- internal working files (kept for the operator, never delivered to customers) -----
+
+    def save_internal(self, job_id: str, paths: list[Path]) -> list[str]:
+        """Upload working files such as the source video and the frames zip to internal/<job_id>/."""
+        saved = []
+        for path in paths:
+            path = Path(path)
+            if not path.exists():
+                continue
+            blob_name = f"internal/{job_id}/{path.name}"
+            with path.open("rb") as f:
+                self.container.upload_blob(blob_name, f, overwrite=True)
+            saved.append(blob_name)
+        return saved
 
     # ----- outputs -----
 

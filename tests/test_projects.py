@@ -101,6 +101,15 @@ class StoreUnit(unittest.TestCase):
         self.assertIsNone(self.store.get_project("missing"))
         self.assertIsNone(self.store.get_project("../etc"))
 
+    def test_internal_files_go_under_internal_prefix(self):
+        self.store.create_project("Internal")
+        src = Path(_tmp.name) / "upload.mp4"
+        src.write_bytes(b"video")
+        saved = self.store.save_internal("job9", [src, Path(_tmp.name) / "missing.zip"])
+        self.assertEqual(saved, ["internal/job9/upload.mp4"])
+        self.assertEqual(self.container.blobs["internal/job9/upload.mp4"], b"video")
+        self.assertFalse(any(n.startswith("projects/internal/jobs/job9") for n in self.container.blobs))
+
     def test_storage_not_configured(self):
         saved = os.environ.pop("AZURE_STORAGE_CONNECTION_STRING")
         try:

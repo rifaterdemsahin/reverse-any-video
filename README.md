@@ -175,6 +175,13 @@ Model names are set with `DEEPINFRA_VISION_MODEL` and `DEEPINFRA_TEXT_MODEL`. Th
 `Qwen/Qwen2.5-VL-32B-Instruct` and `meta-llama/Llama-3.3-70B-Instruct`. Models are retired often, so check the
 live list at deepinfra.com if a call fails with a 404.
 
+### Cost and price
+
+`/pricing` (and `GET /api/quote?duration_s=306`) shows what one analysis costs: DeepInfra tokens, Fly.io compute
+and Azure storage, plus a 10% margin on that cost and an estimated card fee. Every rate has its source, and
+each can be overridden with an environment variable of the same name (for example `PRICE_MARGIN=0.10`,
+`DEEPINFRA_...` prices in `pricing.py`). Rates are third-party listings and must be checked before you quote a customer.
+
 ### Projects and Azure storage
 
 A project is a folder for one video's analyses. Every project lives in one Azure Blob container

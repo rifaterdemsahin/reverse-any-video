@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="claude:viewport-fit-sides" content="cover">
+<title>Reverse Any Video Pricing</title>
+<style>
+:root {
+  --bg: #f7f6f2; --fg: #1d1d1b; --muted: #5d5b55; --rule: #dcd9cf; --card: #fff; --accent: #0f6e5c; --warn: #8a4b00;
+  --sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif; --mono: ui-monospace, Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) { --bg: #121412; --fg: #ecebe6; --muted: #aeaca3; --rule: #2e332f; --card: #1a1d1b; --accent: #5fd0b5; --warn: #f0b36a; color-scheme: dark; }
+}
+:root[data-theme="dark"] { --bg: #121412; --fg: #ecebe6; --muted: #aeaca3; --rule: #2e332f; --card: #1a1d1b; --accent: #5fd0b5; --warn: #f0b36a; color-scheme: dark; }
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--fg); font: 16px/1.55 var(--sans);
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 32px; }
+main { max-width: 780px; margin: 0 auto; }
+h1 { font-size: clamp(1.7rem, 5vw, 2.4rem); margin: 0 0 .4rem; }
+h2 { font-size: 1.2rem; margin: 2rem 0 .6rem; }
+.lede, .muted { color: var(--muted); }
+.menu { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 18px; }
+.menu a { padding: 7px 14px; border: 1px solid var(--rule); border-radius: 999px; text-decoration: none; color: var(--fg); }
+.menu a[aria-current="page"], .menu a:hover { border-color: var(--accent); color: var(--accent); font-weight: 600; }
+.card { background: var(--card); border: 1px solid var(--rule); border-radius: 10px; padding: 18px; margin: 14px 0; }
+label { display: block; font-weight: 600; margin-bottom: 6px; }
+input[type="number"] { font: inherit; width: 100%; max-width: 220px; padding: 9px 10px; border: 1px solid var(--rule); border-radius: 8px; background: var(--bg); color: var(--fg); }
+table { width: 100%; border-collapse: collapse; font-size: .95rem; }
+th, td { text-align: left; padding: 8px 6px; border-bottom: 1px solid var(--rule); vertical-align: top; }
+td.num, th.num { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.detail { color: var(--muted); font-size: .85rem; }
+.total { font-size: 1.6rem; font-weight: 700; color: var(--accent); }
+.note { color: var(--muted); font-size: .9rem; }
+.err { color: var(--warn); }
+details summary { cursor: pointer; color: var(--accent); }
+code { font-family: var(--mono); font-size: .9em; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+</style>
+</head>
+<body>
+<main>
+  <nav class="menu" aria-label="Site">
+    <a href="/">🎬 Analyzer</a>
+    <a href="/pricing" aria-current="page">💷 Pricing</a>
+    <a href="/setup">🧭 Setup guide</a>
+    <a href="https://github.com/rifaterdemsahin/reverse-any-video" target="_blank" rel="noopener">🐙 Source</a>
+  </nav>
+
+  <h1>💷 What one analysis costs</h1>
+  <p class="lede">The price is the real cost of the run, plus a 10% margin on that cost. Every line and every rate is shown below. Enter the length of the video.</p>
+
+  <section class="card">
+    <label for="secs">Video length (seconds)</label>
+    <input id="secs" type="number" min="1" max="1800" step="1" value="306" inputmode="numeric">
+    <p class="note">Up to 1,800 seconds (30 minutes). The test video is 306 seconds.</p>
+    <p id="status" class="note" role="status"></p>
+  </section>
+
+  <section class="card" aria-live="polite">
+    <div class="muted">Price for this run</div>
+    <div class="total" id="price">,</div>
+    <table id="lines" aria-label="Cost breakdown"></table>
+    <p class="note" id="margin"></p>
+    <p class="note" id="fee"></p>
+  </section>
+
+  <h2>📐 How it is worked out</h2>
+  <details class="card">
+    <summary>Assumptions</summary>
+    <ul id="assumptions"></ul>
+  </details>
+  <details class="card">
+    <summary>Rates and sources</summary>
+    <table id="rates" aria-label="Rates"></table>
+  </details>
+  <p class="note">Rates come from public third-party listings and change often. The quote is an estimate. Set the rates on the server with environment variables of the same name, then the page updates on its own.</p>
+</main>
+<script>
+  const fmt = (n) => "$" + Number(n).toFixed(n < 1 ? 3 : 2);
+  const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  const input = document.getElementById("secs");
+
+  async function load() {
+    const status = document.getElementById("status");
+    const secs = Number(input.value);
+    if (!(secs >= 1 && secs <= 1800)) { status.className = "note err"; status.textContent = "Enter a length from 1 to 1,800 seconds."; return; }
+    status.className = "note"; status.textContent = "Working it out…";
+    try {
+      const r = await fetch("/api/quote?duration_s=" + secs);
+      const text = await r.text();
+      let q;
+      try { q = JSON.parse(text); } catch (e) { throw new Error("The server did not return a quote (" + r.status + ")."); }
+      if (!r.ok) throw new Error(q.error || "The server refused this length.");
+      document.getElementById("price").textContent = fmt(q.price) + " " + q.currency;
+      document.getElementById("lines").innerHTML =
+        "<tr><th>Item</th><th class='num'>Cost</th></tr>" +
+        q.lines.map((l) => `<tr><td>${esc(l.label)}<div class='detail'>${esc(l.detail)}</div></td><td class='num'>${fmt(l.amount)}</td></tr>`).join("") +
+        `<tr><td><b>Cost</b></td><td class='num'><b>${fmt(q.cost)}</b></td></tr>` +
+        `<tr><td>Margin (${q.margin_percent}% of cost)</td><td class='num'>${fmt(q.margin)}</td></tr>` +
+        `<tr><td>Card payment fee (estimate)</td><td class='num'>${fmt(q.card_fee_estimate)}</td></tr>`;
+      document.getElementById("margin").textContent = "Your price is the cost plus the margin, plus the card fee, rounded up to the cent.";
+      document.getElementById("fee").textContent = "Usage: " + q.usage.shots + " shots, " + q.usage.panels + " storyboard panels, " + q.usage.transcript_chars.toLocaleString() + " transcript characters.";
+      document.getElementById("assumptions").innerHTML = q.assumptions.map((a) => `<li>${esc(a)}</li>`).join("");
+      document.getElementById("rates").innerHTML =
+        "<tr><th>Rate</th><th>Value</th><th>Source</th></tr>" +
+        Object.entries(q.rates).map(([k, v]) => `<tr><td><code>${esc(k)}</code></td><td class='num'>${esc(v.value)}</td><td>${esc(v.source)}</td></tr>`).join("");
+      status.textContent = "";
+    } catch (e) {
+      status.className = "note err"; status.textContent = e.message;
+    }
+  }
+  input.addEventListener("change", load);
+  input.addEventListener("input", () => { clearTimeout(window._t); window._t = setTimeout(load, 400); });
+  load();
+</script>
+</body>
+</html>

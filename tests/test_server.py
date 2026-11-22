@@ -89,9 +89,11 @@ class Api(unittest.TestCase):
         self.assertEqual(j["status"], "done", j)
         v = j["result"]["analysis"]["video"]
         self.assertEqual(v["shots"], 2)
-        self.assertEqual(len(j["result"]["frames"]), 2)
+        self.assertNotIn("frames", j["result"])
+        self.assertNotIn("segments", str(j["result"]))          # no transcript text in the API result
         leftover = sorted(p.name for p in Path(self.server.jobs[j["id"]]["dir"]).iterdir())
-        self.assertEqual(leftover, ["SKILL.md", "analysis.json", "report.html", "script.md"])
+        self.assertEqual(leftover, ["edit_decision_list.edl", "hyperframes_prompt.md",
+                                    "hyperframes_template.json", "metrics.json"])
 
 
     def test_plan_job_uses_claude_step(self):

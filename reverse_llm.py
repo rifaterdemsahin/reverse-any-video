@@ -1,10 +1,11 @@
 """LLM steps that turn one analysed video into a production package (DeepInfra, see deepinfra.py).
 
 Written into the job folder:
-  script_clean.md          the transcript as a clean script with sections and timestamps   (text model)
-  storyboard.md            one panel per sampled shot: what is on screen, camera, dialogue (vision model)
+  storyboard.md            one panel per sampled shot: what is on screen, camera, purpose (vision model).
+                           It says whether there is speech, never what is said
   edit_decision_list.edl   CMX 3600 EDL, one event per shot. Needs no model, names come from the storyboard
-  frames.zip               one JPEG per shot, named by its timecode
+
+Nothing here reproduces source text. Frames are used for analysis only and are not delivered.
 
 Every step is optional and reports its own error, so one failure does not stop the others.
 Environment:
@@ -30,7 +31,7 @@ TRANSCRIPT_CHARS = 60000
 
 VISION_PROMPT = """You are a film editor reverse-engineering a video for a storyboard.
 Each image is one shot: the frame from its middle. Its time range and the words spoken during it come before it.
-Describe every shot. Return only a JSON array with one object per shot, in the same order:
+Describe every shot in your own words. Never quote or transcribe speech. Return only a JSON array with one object per shot, in the same order:
 [{"shot": <shot number>, "description": "what is on screen, one or two sentences",
   "camera": "framing and movement, e.g. close-up, static, slow push-in",
   "on_screen_text": "visible text, or empty string",
@@ -168,7 +169,7 @@ def storyboard_md(title: str, source: str | None, shots: list[dict], frame_names
         out += [f"- On screen: {p.get('description', '')}",
                 f"- Camera: {p.get('camera', '')}",
                 f"- Text on screen: {p.get('on_screen_text', '') or 'none'}",
-                f"- Dialogue: {words_in(segs, shot['start'], shot['end']) or 'none'}",
+                f"- Speech in shot: {'yes' if words_in(segs, shot['start'], shot['end']) else 'no'}",
                 f"- Purpose: {p.get('purpose', '')}", ""]
     return "\n".join(out) + "\n"
 
@@ -192,12 +193,6 @@ def build(out_dir: Path, title: str, source: str | None, video_path: Path | None
             summary["errors"].append(f"{name}: {type(e).__name__}: {e}")
             log(f"llm {name} failed: {e}")
             return None
-
-    if segs:
-        text = step("script", lambda: clean_script(segs, title, key))
-        if text:
-            (out_dir / "script_clean.md").write_text(text)
-            summary["files"].append("script_clean.md")
 
     bounds = video_info.get("shot_bounds") or []
     if video_path and bounds:

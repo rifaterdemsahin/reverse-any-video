@@ -36,6 +36,7 @@ from pathlib import Path
 
 import deepinfra
 import reverse_llm
+import template
 
 # --------------------------------------------------------------------------- #
 # Transcript parsing                                                          #
@@ -598,6 +599,26 @@ def run(source: str | None, out_root: Path | str = "out", transcript_text: str |
     if video_path:
         log(f"video: {video.get('shots')} shots, {video.get('cuts_per_min')} cuts/min")
     script = analyze_script(segs, video.get("duration_s") or meta.get("duration_s")) if segs else {}
+
+    # Numbers only: what the deliverables carry. No transcript text, descriptions or quotes.
+    sec = (script or {}).get("sections") or []
+    metrics = {"duration_s": video.get("duration_s") or meta.get("duration_s") or (script or {}).get("duration_s"),
+               "words": (script or {}).get("words"), "wpm": (script or {}).get("wpm"),
+               "questions": (script or {}).get("questions"),
+               "hook_seconds": ((script or {}).get("hook") or {}).get("seconds"),
+               "sections": len(sec), "ctas": len((script or {}).get("ctas") or []),
+               "shots": video.get("shots"), "cuts_per_min": video.get("cuts_per_min"),
+               "shot_avg_s": video.get("shot_avg_s")}
+    written = ["metrics.json"]
+    (out / "metrics.json").write_text(json.dumps(metrics, indent=2))
+    if video.get("shot_bounds"):
+        shot_list = reverse_llm.shots_from_bounds(video["shot_bounds"])
+        (out / "edit_decision_list.edl").write_text(reverse_llm.edl(meta.get("title") or vid or "video",
+                                                                  shot_list, video.get("fps") or 25))
+        written.append("edit_decision_list.edl")
+    if sec:
+        written += template.write(out, metrics, [{"start": s["start"], "end": s["end"]} for s in sec],
+                                  video.get("shots"), video.get("fps"))
 
     llm = None
     key = deepinfra.api_key()

@@ -59,6 +59,7 @@ from fastapi.responses import FileResponse, JSONResponse
 import create_video as cv
 import reverse_video as rv
 import deepinfra
+import pricing
 import storage
 
 ROOT = Path(__file__).resolve().parent
@@ -71,11 +72,10 @@ JOB_TTL = int(os.environ.get("JOB_TTL", "3600"))
 ALLOWED = {h.strip().lower() for h in os.environ.get(
     "ALLOWED_URL_HOSTS", "youtube.com,www.youtube.com,m.youtube.com,youtu.be,music.youtube.com").split(",") if h.strip()}
 ACCESS_TOKEN = os.environ.get("ACCESS_TOKEN") or None
-OUTPUT_FILES = {"report.html": "text/html", "SKILL.md": "text/markdown", "script.md": "text/markdown",
-                "analysis.json": "application/json", "plan.json": "application/json",
-                "captions.srt": "text/plain", "project.zip": "application/zip", "video.mp4": "video/mp4",
-                "script_clean.md": "text/markdown", "storyboard.md": "text/markdown",
-                "edit_decision_list.edl": "text/plain", "frames.zip": "application/zip"}
+# What a job delivers. Numbers, structure and a template only: no transcript, no frames, no video.
+OUTPUT_FILES = {"storyboard.md": "text/markdown", "edit_decision_list.edl": "text/plain",
+                "metrics.json": "application/json", "hyperframes_prompt.md": "text/markdown",
+                "hyperframes_template.json": "application/json"}
 LOGO_TYPES = {".png", ".jpg", ".jpeg", ".svg", ".webp"}
 QUALITIES = {"draft", "looks", "delivery", "standard", "high"}
 
@@ -167,6 +167,13 @@ def _work(job_id: str, source: str | None, transcript: str | None, video: Path |
         result = rv.run(source, DATA, transcript, video, download, COOKIES, max_duration=MAX_DURATION,
                         job_id=job_id, log=lambda m: job["log"].append(m), title=title)
         out = Path(result["out_dir"])
+        # Working files (source video, frames) go to Azure for the operator. Customers never get them.
+        if storage.configured():
+            try:
+                internal = [out / "frames.zip"] + ([video] if video else [])
+                job["internal_saved"] = get_store().save_internal(job_id, internal)
+            except Exception as e:  # noqa: BLE001 - the deliverables still go out
+                job["log"].append(f"internal storage failed: {type(e).__name__}")
         for f in out.iterdir():                      # keep outputs, drop large media
             if f.name not in OUTPUT_FILES:
                 f.unlink(missing_ok=True)
@@ -175,7 +182,8 @@ def _work(job_id: str, source: str | None, transcript: str | None, video: Path |
             job["log"].append(f"saving outputs to project {project}")
             saved = get_store().save_outputs(project, job_id, out, sorted(OUTPUT_FILES))
         job.update(status="done", project=project, saved_to=saved,
-                   result={"analysis": result["analysis"], "frames": result["frames"],
+                   result={"metrics": json.loads((out / "metrics.json").read_text()) if (out / "metrics.json").exists() else {},
+                           "llm": (result["analysis"].get("llm") or {}).get("files", []),
                            "has_transcript": result["has_transcript"], "has_video": result["has_video"]})
     except Exception as e:  # noqa: BLE001 - report every failure to the client
         job.update(status="error", error=f"{type(e).__name__}: {e}")
@@ -219,7 +227,7 @@ def create_job(url: str = Form(""), download: bool = Form(False), transcript: st
     with lock:
         jobs[job_id] = {"id": job_id, "status": "queued", "created": time.time(), "dir": str(job_dir),
                         "log": [], "error": None, "result": None, "finished": None}
-    pool.submit(_work, job_id, url or None, text, video_path, download and bool(url), title.strip() or None, project)
+    pool.submit(_work, job_id, url or None, text, video_path, False, title.strip() or None, project)  # URLs: no download
     return {"id": job_id, "status": "queued", "status_url": f"/api/jobs/{job_id}", "project": project}
 
 
@@ -383,6 +391,20 @@ def get_project(slug: str, x_access_token: str | None = Header(None)):
 @app.get("/")
 def index():
     return FileResponse(DOCS / "index.html", media_type="text/html")
+
+
+@app.get("/api/quote")
+def quote(duration_s: float = 0, transcript_chars: int | None = None, shots: int | None = None,
+          storyboard: bool = True):
+    """Public price for one run, with every line item and assumption. No token: it sends nothing and stores nothing."""
+    if not 0 < duration_s <= MAX_DURATION:
+        raise HTTPException(400, f"duration_s must be between 1 and {MAX_DURATION} seconds.")
+    return pricing.quote(pricing.estimate(duration_s, transcript_chars, shots, storyboard))
+
+
+@app.get("/pricing")
+def pricing_page():
+    return FileResponse(DOCS / "pricing.html", media_type="text/html")
 
 
 @app.get("/setup")

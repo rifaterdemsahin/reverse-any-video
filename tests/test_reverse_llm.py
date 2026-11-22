@@ -91,9 +91,9 @@ class Pipeline(unittest.TestCase):
 
         self.assertTrue(summary["ok"], summary["errors"])
         self.assertIn(di.VISION_MODEL, calls)
-        self.assertIn(di.TEXT_MODEL, calls)
+        self.assertNotIn(di.TEXT_MODEL, calls)        # no text model: nothing reproduces the transcript
         self.assertEqual(summary["edl_events"], 3)
-        self.assertTrue((self.out / "script_clean.md").read_text().startswith("## Intro"))
+        self.assertFalse((self.out / "script_clean.md").exists())
 
         edl = (self.out / "edit_decision_list.edl").read_text()
         self.assertIn("* FROM CLIP NAME:  001 Lake at dusk", edl)
@@ -102,7 +102,8 @@ class Pipeline(unittest.TestCase):
 
         board = (self.out / "storyboard.md").read_text()
         self.assertIn("## Shot 001", board)
-        self.assertIn("Dialogue: Stop scrolling", board)
+        self.assertIn("Speech in shot: yes", board)
+        self.assertNotIn("Stop scrolling", board)     # never the transcript words
         self.assertIn("On screen: Close-up of a face", board)
         self.assertIn("- Frame: `shot_001_", board)
 
@@ -118,7 +119,6 @@ class Pipeline(unittest.TestCase):
         summary = rl.build(self.out, "Demo", None, self.video, self.info, self.segs, "key", None)
         self.assertFalse(summary["ok"])
         self.assertTrue(any("storyboard" in e for e in summary["errors"]))
-        self.assertTrue(any("script" in e for e in summary["errors"]))
         self.assertTrue((self.out / "edit_decision_list.edl").exists())   # the EDL needs no model
         self.assertTrue((self.out / "frames.zip").exists())
         self.assertFalse((self.out / "storyboard.md").exists())
@@ -126,8 +126,7 @@ class Pipeline(unittest.TestCase):
     def test_transcript_only_skips_video_outputs(self):
         self.stub(lambda m, model: "## Script\n[00:00] Hello")
         summary = rl.build(self.out, "Text only", None, None, {}, self.segs, "key", None)
-        self.assertEqual(summary["files"], ["script_clean.md"])
-        self.assertFalse((self.out / "edit_decision_list.edl").exists())
+        self.assertEqual(summary["files"], [])          # transcript alone gives no LLM output
 
 
 if __name__ == "__main__":
