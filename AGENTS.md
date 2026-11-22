@@ -47,7 +47,9 @@ README table, and the page text in `docs/app.html`, then run the evals.
 
 | Path | What it is |
 |---|---|
-| `server.py` | FastAPI app: jobs, bundle, projects, quote, pages, routes |
+| `server.py` | FastAPI app and shared state: jobs, bundle, projects, quote, sanity helpers. Imports the two route modules below |
+| `routes_customer.py` | customer pages (`/`, `/start`, `/pricing`, `/account`), the account API and the Stripe webhook |
+| `routes_admin.py` | admin area (`/admin*`), outputs and the sanity check. Admin sign-in only |
 | `reverse_video.py` | the analyser: transcript, script metrics, ffmpeg shots, `run()` |
 | `reverse_llm.py` | storyboard (vision model) and EDL, frames for analysis |
 | `deepinfra.py` | stdlib client for DeepInfra chat calls |

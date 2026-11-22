@@ -15,8 +15,10 @@ SECRET_PATTERNS = [r"sk_(test|live)_[A-Za-z0-9]{8,}", r"whsec_[A-Za-z0-9]{8,}", 
 
 
 def routes() -> set[str]:
-    src = (ROOT / "server.py").read_text()
-    found = set(re.findall(r'@app\.(?:get|post)\("([^"]+)"', src))
+    """Every route, from server.py and the route modules it imports."""
+    found = set()
+    for path in ROOT.glob("*.py"):
+        found |= set(re.findall(r'@app\.(?:get|post)\("([^"]+)"', path.read_text()))
     return found
 
 
