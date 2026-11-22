@@ -58,6 +58,7 @@ from fastapi.responses import FileResponse, JSONResponse
 
 import create_video as cv
 import reverse_video as rv
+import deepinfra
 import storage
 
 ROOT = Path(__file__).resolve().parent
@@ -72,7 +73,9 @@ ALLOWED = {h.strip().lower() for h in os.environ.get(
 ACCESS_TOKEN = os.environ.get("ACCESS_TOKEN") or None
 OUTPUT_FILES = {"report.html": "text/html", "SKILL.md": "text/markdown", "script.md": "text/markdown",
                 "analysis.json": "application/json", "plan.json": "application/json",
-                "captions.srt": "text/plain", "project.zip": "application/zip", "video.mp4": "video/mp4"}
+                "captions.srt": "text/plain", "project.zip": "application/zip", "video.mp4": "video/mp4",
+                "script_clean.md": "text/markdown", "storyboard.md": "text/markdown",
+                "edit_decision_list.edl": "text/plain", "frames.zip": "application/zip"}
 LOGO_TYPES = {".png", ".jpg", ".jpeg", ".svg", ".webp"}
 QUALITIES = {"draft", "looks", "delivery", "standard", "high"}
 
@@ -109,6 +112,7 @@ def capabilities() -> dict:
             "yt_dlp": bool(shutil.which("yt-dlp")), "js_runtime": bool(shutil.which("deno") or shutil.which("node")),
             "cookies": COOKIES is not None, "auth_required": ACCESS_TOKEN is not None,
             "llm": bool(os.environ.get("ANTHROPIC_API_KEY") or os.environ.get("ANTHROPIC_AUTH_TOKEN")),
+            "deepinfra": deepinfra.api_key() is not None,
             "model": cv.MODEL, "render_backend": cv.pick_backend(), "fonts": cv.FONTS, "aspects": list(cv.ASPECTS),
             "azure_storage": storage.configured(),
             "max_upload_mb": MAX_UPLOAD // (1024 * 1024), "max_duration_s": MAX_DURATION,

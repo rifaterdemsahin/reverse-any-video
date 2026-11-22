@@ -14,6 +14,8 @@ Only the standard library is required. Optional:
   yt-dlp                  metadata, captions and (with --download) the video file
   youtube-transcript-api  captions when yt-dlp is missing or blocked
   ffmpeg / ffprobe        shot-cut, silence and keyframe analysis of a video file
+  DEEPINFRA_API_KEY       adds the LLM outputs: script_clean.md, storyboard.md,
+                          edit_decision_list.edl and frames.zip (see reverse_llm.py)
 """
 from __future__ import annotations
 
@@ -31,6 +33,9 @@ import urllib.parse
 import urllib.request
 from collections import Counter
 from pathlib import Path
+
+import deepinfra
+import reverse_llm
 
 # --------------------------------------------------------------------------- #
 # Transcript parsing                                                          #
@@ -322,6 +327,7 @@ def analyze_video(path: Path, threshold: float = 0.3, with_frames: bool = True) 
         "cuts_per_min": round(len(cuts) / dur * 60, 1) if dur else None,
         "cuts_30s": per_30,
         "first_cut_s": cuts[0] if cuts else None,
+        "shot_bounds": [[round(a, 3), round(b, 3)] for a, b in zip(bounds, bounds[1:]) if b - a > 0.04],
     }
     if info.get("has_audio"):
         sil = detect_silences(path)
@@ -593,7 +599,14 @@ def run(source: str | None, out_root: Path | str = "out", transcript_text: str |
         log(f"video: {video.get('shots')} shots, {video.get('cuts_per_min')} cuts/min")
     script = analyze_script(segs, video.get("duration_s") or meta.get("duration_s")) if segs else {}
 
-    analysis = {"meta": meta, "transcript_format": fmt, "script": script,
+    llm = None
+    key = deepinfra.api_key()
+    if key and (segs or video_path):
+        log("LLM steps: DeepInfra")
+        llm = reverse_llm.build(out, meta.get("title") or vid or "video", source if is_url else None,
+                                video_path, video, segs, key, log)
+
+    analysis = {"meta": meta, "transcript_format": fmt, "script": script, "llm": llm,
                 "video": {k: v for k, v in video.items() if k != "frames"}, "segments": segs}
     (out / "analysis.json").write_text(json.dumps(analysis, indent=2, ensure_ascii=False))
     (out / "script.md").write_text(script_md(meta, segs, script))

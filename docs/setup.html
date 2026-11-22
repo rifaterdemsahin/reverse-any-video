@@ -280,6 +280,18 @@ curl.exe -H "X-Access-Token: $TOKEN" -F url="https://www.youtube.com/watch?v=Knq
     <div class="check"><strong>Check:</strong> the second call returns an <code>id</code>. Open <code>https://&lt;your-app&gt;.fly.dev/api/jobs/&lt;id&gt;</code> until <code>status</code> is <code>done</code>. The outputs are then in the container at <code>projects/first-test/jobs/&lt;id&gt;/</code>.</div>
   </section>
 
+  <section class="step">
+    <div class="num">🧠 Optional · DeepInfra for the script, storyboard and EDL</div>
+    <p>Skip this step if you only need the measured outputs. With a key, each video also gets a clean script, a storyboard with one panel per shot, an edit decision list, and a zip of the frames. Get a key at deepinfra.com and keep it out of chat and the repo.</p>
+    <pre data-os="mac">fly secrets set --stage --app reverse-any-video DEEPINFRA_API_KEY="&lt;your-key&gt;"
+fly deploy --ha=false</pre>
+    <pre data-os="linux">fly secrets set --stage --app reverse-any-video DEEPINFRA_API_KEY="&lt;your-key&gt;"
+fly deploy --ha=false</pre>
+    <pre data-os="windows">fly secrets set --stage --app reverse-any-video "DEEPINFRA_API_KEY=&lt;your-key&gt;"
+fly deploy --ha=false</pre>
+    <div class="check"><strong>Check:</strong> <code>/healthz</code> shows <code>"deepinfra": true</code>. A finished job then lists <code>storyboard.md</code>, <code>edit_decision_list.edl</code>, <code>script_clean.md</code> and <code>frames.zip</code>.</div>
+  </section>
+
   <h2>🛟 If something goes wrong</h2>
   <table>
     <tr><th>You see</th><th>Likely cause and fix</th></tr>

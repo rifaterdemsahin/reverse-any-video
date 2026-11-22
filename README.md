@@ -153,6 +153,28 @@ curl -F brief="..." -F metrics=@metrics.json -F touches='{"brand":"Acme"}' https
 curl -F plan=@plan.json -F touches='{"brand":"Acme"}' -F logo=@logo.png https://<app>.fly.dev/api/renders
 ```
 
+### LLM production package (DeepInfra)
+
+Give the app a video link and, when `DEEPINFRA_API_KEY` is set, it also writes:
+
+| File | What it is | Made by |
+|---|---|---|
+| `script_clean.md` | the transcript as a clean script with sections and `[mm:ss]` times | text model |
+| `storyboard.md` | one panel per shot (spread evenly, up to 40): on-screen description, camera, text on screen, dialogue, purpose | vision model |
+| `edit_decision_list.edl` | CMX 3600 EDL, one event per shot on one track, ready for a non-linear editor | the shot cuts, plus clip names from the storyboard |
+| `frames.zip` | one JPEG per shot, named by its timecode | ffmpeg |
+
+Without a key, the app writes the measured outputs only, as before. A model failure is reported in
+`analysis.json` under `llm.errors`, and the other files are still written.
+
+```bash
+fly secrets set --stage --app reverse-any-video DEEPINFRA_API_KEY=<your-key>   # then: fly deploy --ha=false
+```
+
+Model names are set with `DEEPINFRA_VISION_MODEL` and `DEEPINFRA_TEXT_MODEL`. The defaults are
+`Qwen/Qwen2.5-VL-32B-Instruct` and `meta-llama/Llama-3.3-70B-Instruct`. Models are retired often, so check the
+live list at deepinfra.com if a call fails with a 404.
+
 ### Projects and Azure storage
 
 A project is a folder for one video's analyses. Every project lives in one Azure Blob container
