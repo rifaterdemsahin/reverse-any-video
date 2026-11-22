@@ -56,7 +56,6 @@ README table, and the page text in `docs/app.html`, then run the evals.
 | `storage.py` | Azure Blob: projects and internal files |
 | `vault.py` | reads secrets from Azure Key Vault, env vars first |
 | `gmail.py` | sends mail through the Gmail API (not yet wired to jobs) |
-| `create_video.py` | older plan-and-render pipeline (Claude plan, HyperFrames build) |
 | `docs/` | every page: `app.html` (analyzer, built into `index.html`), `landing.html`, `start.html`, `pricing.html`, `setup.html`, `settings.html`, `menu.js` (shared menu) |
 | `docs/build.py` | wraps `app.html` into `index.html`. Run it after editing `app.html` |
 | `admin/` | internal documents, for the owner only |
@@ -108,7 +107,6 @@ start. This has happened before. Check `fly logs --app reverse-any-video` if the
 - Stripe checkout, the order flow and email on completion are not built.
 - Order records live on the Fly machine's disk and are lost on restart.
 - A link job produces no shots, so no EDL and no storyboard. Those need an upload.
-- The HyperFrames render needs a render backend (`RENDER_BACKEND`, `SPRITES_TOKEN`) to produce a video.
 
 ## Working style
 

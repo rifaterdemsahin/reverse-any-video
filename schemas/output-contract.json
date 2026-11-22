@@ -100,6 +100,15 @@
         "AI key on the server"
       ],
       "contents": "One section per sampled shot: '## Shot NNN · mm:ss.s to mm:ss.s · <clip name>', then bullets: Frame, On screen, Camera, Text on screen, Speech in shot (yes or no), Purpose. Never the words spoken."
+    },
+    {
+      "name": "hyperframes_project.zip",
+      "format": "application/zip",
+      "needs": [
+        "link",
+        "upload"
+      ],
+      "contents": "HyperFrames project folder: index.html composition with scenes on track 0, the storyboard reference on track 2, animated subtitles on track 3, plus assets/storyboard.png and README.txt. Placeholders stay until the customer fills them."
     }
   ],
   "availability": {

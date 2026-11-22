@@ -15,14 +15,13 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
-import create_video  # noqa: E402
 import reverse_llm  # noqa: E402
 import template  # noqa: E402
 
 FIXTURE = ROOT / "tests" / "fixtures" / "demo_script_youtube_copy.txt"   # synthetic, original text
 DELIVERABLES = {"storyboard.md", "edit_decision_list.edl", "metrics.json",
                 "hyperframes_prompt.md", "hyperframes_template.json", "README.md", "AGENTS.md",
-                "script.md", "prompter.md", "storyboard.png"}
+                "script.md", "prompter.md", "storyboard.png", "video.json", "hyperframes_project.zip"}
 NGRAM = 6   # a run of this many words from the transcript in an output is a leak
 
 
@@ -94,8 +93,10 @@ class OutputRules(unittest.TestCase):
 
     def test_template_is_a_valid_plan_with_placeholders(self):
         t = json.loads((self.out / "hyperframes_template.json").read_text())
-        plan = create_video.validate_plan({"title": t["title"], "logline": t["logline"], "scenes": t["scenes"]})
-        self.assertEqual(len(plan["scenes"]), len(t["scenes"]))
+        kinds = {"title", "point", "list", "stat", "quote", "cta"}
+        for scene in t["scenes"]:
+            self.assertIn(scene["kind"], kinds)
+            self.assertEqual(set(scene), {"kind", "headline", "body", "items", "stat", "narration"})
         for scene in t["scenes"]:
             self.assertIn("{{headline_", scene["headline"])
             self.assertIn("{{narration_", scene["narration"])

@@ -10,6 +10,7 @@ from pathlib import Path
 FILE_GUIDE = [
     ("video.json", "the title, channel, date and a link to the thumbnail of the source video, as text."),
     ("script.md", "the script to write, one block per scene, with the time and the word target. Your own words."),
+    ("hyperframes_project.zip", "a HyperFrames project: the scenes with placeholders, the storyboard reference and animated subtitles. Open index.html in HyperFrames."),
     ("prompter.md", "the same script set out for a teleprompter, with pauses marked."),
     ("storyboard.png", "one storyboard sheet with a card per scene: time, length and words per scene."),
     ("metrics.json", "length, pace, cut rate, shot length and hook timing, as numbers."),

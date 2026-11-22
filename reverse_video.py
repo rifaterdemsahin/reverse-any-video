@@ -620,6 +620,10 @@ def run(source: str | None, out_root: Path | str = "out", transcript_text: str |
     if sec:
         written += template.write(out, metrics, [{"start": s["start"], "end": s["end"]} for s in sec],
                                   video.get("shots"), video.get("fps"))
+        import hyperframes_project
+        hyperframes_project.build(json.loads((out / "hyperframes_template.json").read_text()), out,
+                                  out / "storyboard.png")
+        written.append("hyperframes_project.zip")
 
     # Title and details of the source video, as text. The thumbnail is linked, never copied.
     dur = meta.get("duration_s") or video.get("duration_s")

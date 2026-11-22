@@ -6,8 +6,6 @@
   GET  /api/jobs/{id}             job status, log and results
   GET  /api/jobs/{id}/files/{f}   report.html, SKILL.md, script.md, analysis.json,
                                   plan.json, captions.srt, project.zip, video.mp4
-  POST /api/plans                 Claude writes a new script in the measured style
-  POST /api/renders               build a HyperFrames project from a plan and render it
   GET  /api/jobs/{id}/files/{f}   report.html, SKILL.md, script.md or analysis.json
   POST /api/projects              create a project (needs X-Access-Token if set)
   GET  /api/projects              list projects
@@ -31,10 +29,6 @@ Environment:
   ALLOWED_URL_HOSTS  comma-separated hosts, or * for any (default: YouTube hosts)
   ACCESS_TOKEN       if set, /api/jobs and /api/projects require header X-Access-Token
   YT_COOKIES         contents of a cookies.txt, for when YouTube asks to sign in
-  ANTHROPIC_API_KEY  for POST /api/plans (Claude writes the script)
-  RENDER_BACKEND     auto (default), sprite, local or none
-  SPRITES_TOKEN      Fly.io Sprites token: renders run on a Sprite (SPRITE_NAME, default rav-render)
-  RENDER_WORKERS     renders at once (default 1)
   AZURE_KEYVAULT_URL, AZURE_TENANT_ID, AZURE_CLIENT_ID, AZURE_CLIENT_SECRET
                      Key Vault that holds the storage connection string (see storage.py)
   AZURE_STORAGE_CONNECTION_STRING   alternative to Key Vault, for local runs
@@ -58,7 +52,6 @@ from urllib.parse import urlparse
 from fastapi import FastAPI, File, Form, Header, HTTPException, Request, UploadFile
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse, Response
 
-import create_video as cv
 import reverse_video as rv
 import accounts
 import admin
@@ -83,9 +76,8 @@ OUTPUT_FILES = {"storyboard.md": "text/markdown", "edit_decision_list.edl": "tex
                 "metrics.json": "application/json", "hyperframes_prompt.md": "text/markdown",
                 "hyperframes_template.json": "application/json", "script.md": "text/markdown",
                 "prompter.md": "text/markdown", "storyboard.png": "image/png", "video.json": "application/json",
+                "hyperframes_project.zip": "application/zip",
                 "README.md": "text/markdown", "AGENTS.md": "text/markdown"}
-LOGO_TYPES = {".png", ".jpg", ".jpeg", ".svg", ".webp"}
-QUALITIES = {"draft", "looks", "delivery", "standard", "high"}
 
 DATA.mkdir(parents=True, exist_ok=True)
 COOKIES: str | None = None
@@ -97,7 +89,6 @@ if os.environ.get("YT_COOKIES"):
 
 app = FastAPI(title="reverse-any-video", docs_url="/api/docs", redoc_url=None)
 pool = ThreadPoolExecutor(max_workers=WORKERS)
-render_pool = ThreadPoolExecutor(max_workers=int(os.environ.get("RENDER_WORKERS", "1")))
 jobs: dict[str, dict] = {}
 lock = threading.Lock()
 _store: storage.ProjectStore | None = None
@@ -119,9 +110,7 @@ def capabilities() -> dict:
     return {"service": "reverse-any-video", "ok": True, "ffmpeg": bool(shutil.which("ffmpeg")),
             "yt_dlp": bool(shutil.which("yt-dlp")), "js_runtime": bool(shutil.which("deno") or shutil.which("node")),
             "cookies": COOKIES is not None, "auth_required": ACCESS_TOKEN is not None,
-            "llm": bool(os.environ.get("ANTHROPIC_API_KEY") or os.environ.get("ANTHROPIC_AUTH_TOKEN")),
             "deepinfra": deepinfra.api_key() is not None,
-            "model": cv.MODEL, "render_backend": cv.pick_backend(), "fonts": cv.FONTS, "aspects": list(cv.ASPECTS),
             "azure_storage": storage.configured(),
             "max_upload_mb": MAX_UPLOAD // (1024 * 1024), "max_duration_s": MAX_DURATION,
             "allowed_url_hosts": sorted(ALLOWED), "queued_or_running": sum(j["status"] in ("queued", "running") for j in jobs.values())}
@@ -317,108 +306,6 @@ def get_file(job_id: str, name: str):
     return FileResponse(path, media_type=OUTPUT_FILES[name])
 
 
-# --------------------------------------------------------------------------- #
-# Create: plan with Claude, then render with HyperFrames                      #
-# --------------------------------------------------------------------------- #
-
-def _json_form(value: str, name: str) -> dict:
-    try:
-        data = json.loads(value or "{}")
-    except json.JSONDecodeError as e:
-        raise HTTPException(400, f"{name} is not valid JSON: {e.msg}")
-    if not isinstance(data, dict):
-        raise HTTPException(400, f"{name} must be a JSON object.")
-    return data
-
-
-def _new_job(kind: str) -> dict:
-    _cleanup()
-    job_id = uuid.uuid4().hex[:12]
-    job_dir = DATA / job_id
-    job_dir.mkdir(parents=True)
-    job = {"id": job_id, "kind": kind, "status": "queued", "created": time.time(), "dir": str(job_dir),
-           "log": [], "error": None, "result": None, "finished": None}
-    with lock:
-        jobs[job_id] = job
-    return job
-
-
-def _work_plan(job: dict, brief: str, blueprint: str, metrics: dict, touches: dict):
-    job.update(status="running", started=time.time())
-    try:
-        job["log"].append(f"plan: asking {cv.MODEL}")
-        plan = cv.write_plan(metrics, blueprint, brief, touches)
-        (Path(job["dir"]) / "plan.json").write_text(json.dumps({"plan": plan, "touches": touches, "metrics": metrics}, indent=2))
-        job["log"].append(f"plan: {len(plan['scenes'])} scenes")
-        job.update(status="done", result={"plan": plan, "touches": touches, "metrics": metrics})
-    except Exception as e:  # noqa: BLE001
-        job.update(status="error", error=f"{type(e).__name__}: {e}")
-    finally:
-        job["finished"] = time.time()
-
-
-@app.post("/api/plans", status_code=202)
-def create_plan(brief: str = Form(...), blueprint: str = Form(""), metrics: str = Form("{}"),
-                touches: str = Form("{}"), x_access_token: str | None = Header(None)):
-    _check_token(x_access_token)
-    if not brief.strip():
-        raise HTTPException(400, "Describe the new video in brief.")
-    m, t = _json_form(metrics, "metrics"), cv.clean_touches(_json_form(touches, "touches"))
-    job = _new_job("plan")
-    pool.submit(_work_plan, job, brief[:4000], blueprint[:40000], m, t)
-    return {"id": job["id"], "status": "queued", "status_url": f"/api/jobs/{job['id']}"}
-
-
-def _work_render(job: dict, plan: dict, touches: dict, metrics: dict, logo: Path | None, quality: str):
-    job.update(status="running", started=time.time())
-    d = Path(job["dir"])
-    try:
-        project = cv.build_project(plan, touches, metrics, d / "project", logo)
-        cv.zip_project(project, d / "project.zip")
-        for name in ("plan.json", "script.md", "captions.srt"):
-            shutil.copy(project / name, d / name)
-        backend = cv.pick_backend()
-        job["log"].append(f"built HyperFrames project; render backend: {backend}")
-        video = cv.render(project, d / "video.mp4", backend, quality, job=job["id"], log=job["log"].append)
-        shutil.rmtree(project, ignore_errors=True)
-        job.update(status="done", result={"backend": backend, "video": bool(video),
-                                          "timeline": cv.timeline(cv.validate_plan(plan), metrics)})
-    except Exception as e:  # noqa: BLE001
-        job.update(status="error", error=f"{type(e).__name__}: {e}")
-    finally:
-        job["finished"] = time.time()
-
-
-@app.post("/api/renders", status_code=202)
-def create_render(plan: str = Form(...), touches: str = Form("{}"), metrics: str = Form("{}"),
-                  quality: str = Form("draft"), logo: UploadFile | None = File(None),
-                  x_access_token: str | None = Header(None)):
-    _check_token(x_access_token)
-    p = _json_form(plan, "plan")
-    try:
-        p = cv.validate_plan(p.get("plan", p))
-    except ValueError as e:
-        raise HTTPException(400, str(e))
-    t, m = cv.clean_touches(_json_form(touches, "touches")), _json_form(metrics, "metrics")
-    if quality not in QUALITIES:
-        raise HTTPException(400, f"quality must be one of {', '.join(sorted(QUALITIES))}")
-    job = _new_job("render")
-    logo_path = None
-    if logo is not None and logo.filename:
-        ext = Path(logo.filename).suffix.lower()
-        if ext not in LOGO_TYPES:
-            shutil.rmtree(job["dir"], ignore_errors=True)
-            jobs.pop(job["id"], None)
-            raise HTTPException(400, f"Logo must be one of {', '.join(sorted(LOGO_TYPES))}.")
-        data = logo.file.read(5 * 1024 * 1024 + 1)
-        if len(data) > 5 * 1024 * 1024:
-            shutil.rmtree(job["dir"], ignore_errors=True)
-            jobs.pop(job["id"], None)
-            raise HTTPException(413, "Logo is larger than 5 MB.")
-        logo_path = Path(job["dir"]) / f"logo{ext}"
-        logo_path.write_bytes(data)
-    render_pool.submit(_work_render, job, p, t, m, logo_path, quality)
-    return {"id": job["id"], "status": "queued", "status_url": f"/api/jobs/{job['id']}"}
 @app.post("/api/projects", status_code=201)
 def create_project(name: str = Form(""), x_access_token: str | None = Header(None)):
     _check_token(x_access_token)
