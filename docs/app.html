@@ -174,12 +174,7 @@ details summary { cursor: pointer; font-weight: 600; font-size: 14px; margin-bot
     <span class="rec"><i></i>nothing is uploaded</span>
   </header>
 
-  <nav class="site-menu" aria-label="Site">
-    <a href="/landing">🏠 Home</a>
-    <a href="/" aria-current="page">🎬 Analyzer</a>
-    <a href="/setup">🧭 Setup guide</a>
-    <a href="https://github.com/rifaterdemsahin/reverse-any-video" target="_blank" rel="noopener">🐙 Source</a>
-  </nav>
+  <div id="site-menu"></div>
   <style>
     .site-menu { display: flex; flex-wrap: wrap; gap: 8px; margin: 4px 0 18px }
     .site-menu a { padding: 7px 14px; border: 1px solid currentColor; border-radius: 999px; text-decoration: none; color: inherit; opacity: .85 }
@@ -843,3 +838,5 @@ setCreateMode();
 
 render();
 </script>
+
+<script src="/menu.js" defer></script>

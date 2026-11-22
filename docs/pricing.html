@@ -41,13 +41,7 @@ code { font-family: var(--mono); font-size: .9em; }
 </head>
 <body>
 <main>
-  <nav class="menu" aria-label="Site">
-    <a href="/landing">🏠 Home</a>
-    <a href="/">🎬 Analyzer</a>
-    <a href="/pricing" aria-current="page">💷 Pricing</a>
-    <a href="/setup">🧭 Setup guide</a>
-    <a href="https://github.com/rifaterdemsahin/reverse-any-video" target="_blank" rel="noopener">🐙 Source</a>
-  </nav>
+  <div id="site-menu"></div>
 
   <h1>💷 What one analysis costs</h1>
   <p class="lede">The price is the real cost of the run, plus a 10% margin on that cost. Every line and every rate is shown below. Enter the length of the video.</p>
@@ -116,5 +110,6 @@ code { font-family: var(--mono); font-size: .9em; }
   input.addEventListener("input", () => { clearTimeout(window._t); window._t = setTimeout(load, 400); });
   load();
 </script>
+<script src="/menu.js" defer></script>
 </body>
 </html>
