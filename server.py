@@ -82,7 +82,7 @@ ACCESS_TOKEN = os.environ.get("ACCESS_TOKEN") or None
 OUTPUT_FILES = {"storyboard.md": "text/markdown", "edit_decision_list.edl": "text/plain",
                 "metrics.json": "application/json", "hyperframes_prompt.md": "text/markdown",
                 "hyperframes_template.json": "application/json", "script.md": "text/markdown",
-                "prompter.md": "text/markdown", "storyboard.png": "image/png",
+                "prompter.md": "text/markdown", "storyboard.png": "image/png", "video.json": "application/json",
                 "README.md": "text/markdown", "AGENTS.md": "text/markdown"}
 LOGO_TYPES = {".png", ".jpg", ".jpeg", ".svg", ".webp"}
 QUALITIES = {"draft", "looks", "delivery", "standard", "high"}
@@ -194,6 +194,15 @@ def _work(job_id: str, source: str | None, transcript: str | None, video: Path |
                         job_id=job_id, log=lambda m: job["log"].append(m), title=title)
         out = Path(result["out_dir"])
         _save_job_records(job, out)              # before cleanup removes llm_trace.json
+        if storage.configured():
+            try:
+                meta = (result["analysis"] or {}).get("meta") or {}
+                record = {"created": job.get("created"), "finished": time.time(), "status": "done",
+                          "requested_by": job.get("requested_by"), "source": job.get("source"),
+                          "title": meta.get("title") or job.get("title"), "project": project}
+                job["outputs_saved"] = get_store().save_job_outputs(job_id, out, sorted(OUTPUT_FILES), record)
+            except Exception as e:  # noqa: BLE001 - the customer still gets the result
+                job["log"].append(f"outputs not saved: {type(e).__name__}")
         # Working files (source video, frames) go to Azure for the operator. Customers never get them.
         if storage.configured():
             try:
@@ -222,10 +231,12 @@ def _work(job_id: str, source: str | None, transcript: str | None, video: Path |
 
 
 @app.post("/api/jobs", status_code=202)
-def create_job(url: str = Form(""), download: bool = Form(False), transcript: str = Form(""), title: str = Form(""),
-               transcript_file: UploadFile | None = File(None), video: UploadFile | None = File(None),
-               project: str = Form(""), x_access_token: str | None = Header(None)):
+def create_job(request: Request, url: str = Form(""), download: bool = Form(False), transcript: str = Form(""),
+               title: str = Form(""), transcript_file: UploadFile | None = File(None),
+               video: UploadFile | None = File(None), project: str = Form(""),
+               x_access_token: str | None = Header(None)):
     _check_token(x_access_token)
+    requested_by = admin.email_from_session(request.cookies.get(admin.ADMIN_COOKIE)) or "access token"
     _cleanup()
     url = url.strip()
     if url:
@@ -254,7 +265,9 @@ def create_job(url: str = Form(""), download: bool = Form(False), transcript: st
             raise
     with lock:
         jobs[job_id] = {"id": job_id, "status": "queued", "created": time.time(), "dir": str(job_dir),
-                        "log": [], "error": None, "result": None, "finished": None}
+                        "log": [], "error": None, "result": None, "finished": None,
+                        "requested_by": requested_by, "title": title.strip() or None,
+                        "source": "link" if url else ("upload" if has_video else "transcript")}
     pool.submit(_work, job_id, url or None, text, video_path, False, title.strip() or None, project)  # URLs: no download
     return {"id": job_id, "status": "queued", "status_url": f"/api/jobs/{job_id}", "project": project}
 
@@ -583,6 +596,36 @@ def admin_analyzer(request: Request):
     return _admin_page(request, "index.html")
 
 
+def _admin_only(request: Request):
+    if not admin.email_from_session(request.cookies.get(admin.ADMIN_COOKIE)):
+        raise HTTPException(401, "Sign in as the admin first.")
+
+
+@app.get("/admin/api/outputs")
+def admin_outputs(request: Request):
+    _admin_only(request)
+    if not storage.configured():
+        raise HTTPException(503, "Azure storage is not configured.")
+    return {"jobs": get_store().list_job_outputs()}
+
+
+@app.get("/admin/api/outputs/{job_id}/{name}")
+def admin_output_file(request: Request, job_id: str, name: str):
+    _admin_only(request)
+    if name not in OUTPUT_FILES or not re.fullmatch(r"[0-9a-f]{12}", job_id):
+        raise HTTPException(404, "Not found.")
+    data = get_store().read_job_output(job_id, name)
+    if data is None:
+        raise HTTPException(404, "Not found.")
+    return Response(data, media_type=OUTPUT_FILES[name],
+                    headers={"Content-Disposition": f'attachment; filename="{name}"'})
+
+
+@app.get("/admin/outputs")
+def admin_outputs_page(request: Request):
+    return _admin_page(request, "admin-outputs.html")
+
+
 @app.get("/admin/guide")
 def admin_guide(request: Request):
     return _admin_page(request, "admin-guide.html")
@@ -713,9 +756,7 @@ def setup_guide():
     return RedirectResponse("/admin/setup", status_code=308)
 
 
-@app.get("/thumbnail.jpg")
-def thumbnail():
-    return FileResponse(DOCS / "thumbnail.jpg", media_type="image/jpeg")
+
 
 
 @app.exception_handler(HTTPException)

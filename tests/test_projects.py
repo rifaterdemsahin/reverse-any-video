@@ -110,6 +110,22 @@ class StoreUnit(unittest.TestCase):
         self.assertEqual(self.container.blobs["internal/job9/upload.mp4"], b"video")
         self.assertFalse(any(n.startswith("projects/internal/jobs/job9") for n in self.container.blobs))
 
+    def test_job_outputs_saved_per_job_and_listed(self):
+        out = Path(_tmp.name) / "job-out"
+        out.mkdir(exist_ok=True)
+        (out / "metrics.json").write_text("{}")
+        (out / "frames.zip").write_text("internal")          # not a delivered name
+        saved = self.store.save_job_outputs("abc123def456", out, ["metrics.json", "video.json"],
+                                            {"created": 1000, "title": "T", "requested_by": "info@x.co"})
+        self.assertEqual(saved, ["metrics.json"])
+        self.assertIn("outputs/abc123def456/metrics.json", self.container.blobs)
+        self.assertNotIn("outputs/abc123def456/frames.zip", self.container.blobs)   # never passed, so never saved
+        jobs = self.store.list_job_outputs()
+        self.assertEqual(jobs[0]["job_id"], "abc123def456")
+        self.assertEqual(jobs[0]["files"], ["metrics.json"])
+        self.assertEqual(self.store.read_job_output("abc123def456", "metrics.json"), b"{}")
+        self.assertIsNone(self.store.read_job_output("abc123def456", "frames.zip"))
+
     def test_storage_not_configured(self):
         saved = os.environ.pop("AZURE_STORAGE_CONNECTION_STRING")
         try:

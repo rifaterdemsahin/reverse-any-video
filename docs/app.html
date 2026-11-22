@@ -181,21 +181,7 @@ details summary { cursor: pointer; font-weight: 600; font-size: 14px; margin-bot
     .site-menu a[aria-current="page"], .site-menu a:hover { opacity: 1; font-weight: 600 }
   </style>
 
-  <section class="base" aria-labelledby="base-title">
-    <img src="thumbnail.jpg" alt="Thumbnail of the base video: /reverse-any-video, free skill">
-    <div>
-      <span class="label">Starting base · KnqTiAXUH7M</span>
-      <h2 id="base-title">How to reverse engineer any editing style (Turned it into a skill)</h2>
-      <div class="muted">Taha El Harti | Making AI Useful · <a href="https://www.youtube.com/watch?v=KnqTiAXUH7M" target="_blank" rel="noopener">watch on YouTube</a></div>
-      <div class="chips">
-        <span class="chip ok">✓ title, channel, thumbnail</span>
-        <span class="chip no">✕ transcript</span>
-        <span class="chip no">✕ video file</span>
-      </div>
-      <p>YouTube showed the build machine a “confirm you’re not a bot” page, so the script could not be read there. To finish it, open the video, choose <b>…more → Show transcript</b>, copy the panel, and paste it below.</p>
-      <div class="row"><button id="use-base" type="button">Analyze this video</button><span class="muted" style="font-size:13px">Clears the demo script and sets the title.</span></div>
-    </div>
-  </section>
+
 
   <section aria-labelledby="in-title">
     <div class="section-head"><h2 id="in-title">Input: video link</h2><span id="demo-flag" class="example" hidden>Demo script, written for this page. Not from the base video.</span></div>
@@ -611,13 +597,7 @@ for (const id of ["transcript", "title", "url"]) $(id).addEventListener("input",
   clearTimeout(timer); timer = setTimeout(render, 250);
 });
 $("run").addEventListener("click", render);
-$("use-base").addEventListener("click", () => {
-  $("title").value = "How to reverse engineer any editing style (Turned it into a skill)";
-  $("url").value = "https://www.youtube.com/watch?v=KnqTiAXUH7M";
-  $("transcript").value = ""; $("transcript").placeholder = "On YouTube: …more → Show transcript → select the panel's text → paste here.\n\n0:00\nFirst line of the video…\n0:04\nNext line…";
-  ["transcript", "title", "url"].forEach((id) => store.set("rav:" + id, $(id).value));
-  $("demo-flag").hidden = true; render(); $("transcript").focus(); status("Paste the base video's transcript into the box.");
-});
+
 $("tfile").addEventListener("change", async (e) => {
   const f = e.target.files[0]; if (!f) return;
   $("transcript").value = await f.text(); store.set("rav:transcript", $("transcript").value);

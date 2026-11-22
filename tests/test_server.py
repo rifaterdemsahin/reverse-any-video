@@ -67,7 +67,7 @@ class Api(unittest.TestCase):
         self.assertEqual(j["status"], "done", j)
         a = j["result"]["analysis"]
         self.assertEqual(a["meta"]["title"], "Demo")
-        self.assertEqual(a["script"]["wpm"], 119)
+        self.assertEqual(a["script"]["wpm"], 104)
         for name, url in j["files"].items():
             f = self.c.get(url)
             self.assertEqual(f.status_code, 200, name)

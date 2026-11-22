@@ -19,7 +19,7 @@ import create_video  # noqa: E402
 import reverse_llm  # noqa: E402
 import template  # noqa: E402
 
-ANALYSIS = ROOT / "examples" / "KnqTiAXUH7M" / "analysis.json"
+FIXTURE = ROOT / "tests" / "fixtures" / "demo_script_youtube_copy.txt"   # synthetic, original text
 DELIVERABLES = {"storyboard.md", "edit_decision_list.edl", "metrics.json",
                 "hyperframes_prompt.md", "hyperframes_template.json", "README.md", "AGENTS.md",
                 "script.md", "prompter.md", "storyboard.png"}
@@ -41,12 +41,16 @@ def leaks(text: str, grams: set[tuple], n: int = NGRAM) -> list[str]:
 
 
 class Fixture:
-    """Build the deliverables from the committed analysis, the way reverse_video.run does."""
+    """Build the deliverables from the synthetic fixture, the way reverse_video.run does."""
 
     @classmethod
     def build(cls):
-        a = json.loads(ANALYSIS.read_text())
-        s, v = a["script"], a["video"]
+        import reverse_video as rv
+        segs, _ = rv.parse_transcript(FIXTURE.read_text())
+        s = rv.analyze_script(segs, 90.0)
+        v = {"duration_s": 90.0, "fps": 25.0, "shots": 12, "cuts_per_min": 8.0, "shot_avg_s": 7.5,
+             "shot_bounds": [[i * 7.5, (i + 1) * 7.5] for i in range(12)]}
+        a = {"segments": segs, "meta": {"title": "Synthetic fixture"}, "script": s, "video": v}
         metrics = {"duration_s": v["duration_s"], "words": s["words"], "wpm": s["wpm"],
                    "questions": s["questions"], "hook_seconds": s["hook"]["seconds"],
                    "sections": len(s["sections"]), "ctas": len(s.get("ctas") or []),
@@ -55,10 +59,8 @@ class Fixture:
         (out / "metrics.json").write_text(json.dumps(metrics, indent=2))
         template.write(out, metrics, [{"start": x["start"], "end": x["end"]} for x in s["sections"]],
                        v["shots"], v["fps"])
-        # Storyboard text as the model would write it: from the shot list, with speech as yes or no.
-        shots = reverse_llm.shots_from_bounds(v.get("shot_bounds") or [[0, v["duration_s"]]])
-        (out / "edit_decision_list.edl").write_text(
-            reverse_llm.edl("Eval", shots, v.get("fps") or 25))
+        shots = reverse_llm.shots_from_bounds(v["shot_bounds"])
+        (out / "edit_decision_list.edl").write_text(reverse_llm.edl("Eval", shots, v["fps"]))
         panels = "\n".join(f"## Shot {i:03d}\n- On screen: a close-up of an object\n- Speech in shot: yes"
                            for i in range(1, min(len(shots), 3) + 1))
         (out / "storyboard.md").write_text("# Storyboard\n\n" + panels + "\n")

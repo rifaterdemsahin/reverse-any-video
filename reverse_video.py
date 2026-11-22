@@ -621,6 +621,18 @@ def run(source: str | None, out_root: Path | str = "out", transcript_text: str |
         written += template.write(out, metrics, [{"start": s["start"], "end": s["end"]} for s in sec],
                                   video.get("shots"), video.get("fps"))
 
+    # Title and details of the source video, as text. The thumbnail is linked, never copied.
+    dur = meta.get("duration_s") or video.get("duration_s")
+    if meta.get("title") or is_url:
+        info = {"title": meta.get("title"), "channel": meta.get("channel"),
+                "upload_date": meta.get("upload_date"), "url": source if is_url else None,
+                "duration_s": round(dur, 1) if dur else None,
+                "thumbnail_url": meta.get("thumbnail"),
+                "summary": (f"A {round(dur)} second video titled '{meta.get('title') or 'untitled'}'."
+                            if dur else f"A video titled '{meta.get('title') or 'untitled'}'.")}
+        (out / "video.json").write_text(json.dumps(info, indent=2, ensure_ascii=False))
+        written.append("video.json")
+
     # The customer's README.md and AGENTS.md: how to use the other files. No words from the video.
     placeholders = []
     tpl = out / "hyperframes_template.json"

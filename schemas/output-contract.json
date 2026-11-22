@@ -20,6 +20,15 @@
   ],
   "files": [
     {
+      "name": "video.json",
+      "format": "application/json",
+      "needs": [
+        "link",
+        "upload"
+      ],
+      "contents": "title, channel, upload date, duration, a link to the thumbnail (not copied), and a one-line summary written by us."
+    },
+    {
       "name": "script.md",
       "format": "text/markdown",
       "needs": [

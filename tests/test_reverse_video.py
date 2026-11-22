@@ -26,8 +26,8 @@ class TranscriptParsing(unittest.TestCase):
         segs, fmt = rv.parse_transcript((FIX / "demo.vtt").read_text())
         self.assertEqual(fmt, "vtt")
         self.assertEqual([s["text"] for s in segs],
-                         ["Stop copying editing styles", "by guessing. Want to know why?",
-                          "Here's how to measure any video."])
+                         ["Measure the pace of a clip", "one step at a time. Ready to start?",
+                          "Here's the first step."])
 
     def test_srt(self):
         segs, fmt = rv.parse_transcript((FIX / "demo.srt").read_text())
@@ -53,14 +53,13 @@ class ScriptAnalysis(unittest.TestCase):
         self.a = rv.analyze_script(self.segs)
 
     def test_hook(self):
-        self.assertTrue(self.a["hook"]["text"].startswith("Stop copying"))
-        self.assertIn("promise", self.a["hook"]["kinds"])
-        self.assertIn("contrarian / curiosity", self.a["hook"]["kinds"])
+        self.assertTrue(self.a["hook"]["text"].startswith("Measure the pace"))
+        self.assertIn("specific number", self.a["hook"]["kinds"])
 
     def test_markers(self):
         self.assertEqual([round(x["t"]) for x in self.a["ctas"]], [52, 84])
         loops = {x["match"].lower() for x in self.a["open_loops"]}
-        self.assertTrue({"i'll show you", "but first"} <= loops)
+        self.assertIn("to the end", loops)
         self.assertEqual(self.a["questions"], 1)
 
     def test_sections_and_rate(self):
@@ -71,7 +70,7 @@ class ScriptAnalysis(unittest.TestCase):
         meta = {"id": "demo", "title": "Demo", "url": "https://example.com"}
         self.assertIn("Speaking rate", rv.blueprint_md(meta, self.a, {}))
         self.assertIn("## [0:00]", rv.script_md(meta, self.segs, self.a))
-        self.assertIn("<blockquote>Stop copying", rv.report_html(meta, self.a, {}, self.segs))
+        self.assertIn("<blockquote>Measure the pace", rv.report_html(meta, self.a, {}, self.segs))
 
 
 class Ids(unittest.TestCase):

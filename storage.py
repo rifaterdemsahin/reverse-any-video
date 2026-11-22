@@ -120,6 +120,39 @@ class ProjectStore:
                 ids.add(b.name[len(base):].rstrip("/"))
         return sorted(ids)
 
+    # ----- dedicated output folders: one per job, listed in the admin area -----
+
+    def save_job_outputs(self, job_id: str, out_dir: Path, names: list[str], record: dict) -> list[str]:
+        """Upload the delivered files to outputs/<job_id>/ and write job.json beside them."""
+        saved = []
+        for name in names:
+            path = Path(out_dir) / name
+            if not path.exists():
+                continue
+            with path.open("rb") as f:
+                self.container.upload_blob(f"outputs/{job_id}/{name}", f, overwrite=True)
+            saved.append(name)
+        self.put_json(f"outputs/{job_id}/job.json", {**record, "job_id": job_id, "files": saved})
+        return saved
+
+    def list_job_outputs(self) -> list[dict]:
+        """Every job folder under outputs/, newest first, with its job.json record."""
+        records = []
+        for item in self.container.walk_blobs(name_starts_with="outputs/", delimiter="/"):
+            name = getattr(item, "name", "")
+            if not name.endswith("/"):
+                continue
+            rec = self.get_json(f"{name}job.json")
+            if rec:
+                records.append(rec)
+        return sorted(records, key=lambda r: r.get("created") or 0, reverse=True)
+
+    def read_job_output(self, job_id: str, name: str) -> bytes | None:
+        blob = self.container.get_blob_client(f"outputs/{job_id}/{name}")
+        if not blob.exists():
+            return None
+        return blob.download_blob().readall()
+
     # ----- small JSON documents (accounts, login links) -----
 
     def put_json(self, name: str, obj: dict) -> None:

@@ -16,6 +16,7 @@
   var ADMIN = [
     { title: "Work", links: [
       { href: "/admin", label: "🎬 Analyzer" },
+      { href: "/admin/outputs", label: "📦 Outputs" },
       { href: "/admin/sanity", label: "🩺 Sanity check" } ] },
     { title: "Guides", links: [
       { href: "/admin/guide", label: "🧭 Admin guide" },

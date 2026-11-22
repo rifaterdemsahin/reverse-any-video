@@ -1,22 +1,22 @@
 0:00
-Stop copying editing styles by guessing. In the next eight minutes I'll show you how to measure any video and turn it into a skill.
+Measure the pace of any clip with a simple method. The whole thing takes about eight minutes.
 0:07
-Here's the problem. You watch a creator you love, you try to edit like them, and it never feels the same.
+Most people guess their timing. A guess gives you a feeling, not a plan.
 0:14
-That's because pacing is numbers, not vibes. Average shot length, words per minute, where the hook ends.
+Pacing is numbers. Count the words per minute, note the average shot length, and mark where the hook ends.
 0:22
-So first, we pull the script. Every timestamp, every word.
+First, collect the words. Every line with its time.
 0:29
-Now look at the hook. It lands in under fifteen seconds and makes one specific promise.
+Now check the opening. It should land quickly and make one clear promise.
 0:41
-Next, we measure the cuts. This video cuts every 2.4 seconds on average, and faster in the middle.
+Next, count the cuts. Note how often the picture changes, and where it changes faster.
 0:52
-But first, quick one: if this helps, subscribe, it's free and it keeps these coming.
+If this method helps you, keep watching. More methods follow in the next episode.
 0:58
-Step three is structure. The script moves through five sections and each one opens with a question.
+The third step is structure. Look for the sections and note what opens each one.
 1:10
-Why does that matter? Because questions reset attention.
+Why does structure matter? A question at the start of a section holds attention.
 1:16
-Finally, we write all of it into a SKILL file you can hand to Claude.
+Finally, write the numbers into a short plan you can reuse.
 1:24
-The link to the free skill is in the description. Stick around to the end for the template.
+A template with empty slots is in the description. Keep going to the end.

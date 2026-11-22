@@ -11,13 +11,13 @@ video ──► reverse_video.py ──► analysis.json + SKILL.md ──► Cl
 
 Starting base: [How to reverse engineer any editing style (Turned it into a skill)](https://www.youtube.com/watch?v=KnqTiAXUH7M)
 by Taha El Harti. This repo is an independent, open implementation of the `/reverse-any-video` idea from that
-video. See [`examples/KnqTiAXUH7M`](examples/KnqTiAXUH7M) for what has been captured from it so far.
+video. Its measured output is in [`outputs/KnqTiAXUH7M`](outputs/KnqTiAXUH7M) (a local copy; finished jobs are saved to Azure).
 
 ## Links
 
 - **Live app:** https://reverse-any-video.fly.dev/
 - **First test video:** https://www.youtube.com/watch?v=KnqTiAXUH7M
-- **First test output:** [`examples/KnqTiAXUH7M`](examples/KnqTiAXUH7M): `script.md`, `SKILL.md`, `analysis.json`, `report.html`
+- **First test output:** [`outputs/KnqTiAXUH7M`](outputs/KnqTiAXUH7M): `metrics.json`, `hyperframes_template.json`, `hyperframes_prompt.md`, `edit_decision_list.edl`, `video.json`, `README.md`, `AGENTS.md`
 
 ## Quick start
 
