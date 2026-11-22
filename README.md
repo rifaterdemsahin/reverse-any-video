@@ -90,6 +90,7 @@ Writes `out/<id>/analysis.json`, `script.md`, `SKILL.md` and `report.html`.
 | `--transcript FILE` | Your own transcript: VTT, SRT, YouTube json3, JSON, or text copied from YouTube's **Show transcript** panel |
 | `--video FILE` | Analyse a local video file alongside a URL |
 | `--download` | Download the video at ≤480p with yt-dlp for cut analysis |
+| `--local-report` | also write `analysis.json`, `transcript_script.md`, `SKILL.md` and `report.html` (they contain transcript text, so the server never writes them) |
 | `--cookies cookies.txt` | Pass browser cookies to yt-dlp when YouTube asks you to sign in |
 | `--scene-threshold 0.3` | ffmpeg scene score that counts as a cut; lower it for subtle cuts |
 

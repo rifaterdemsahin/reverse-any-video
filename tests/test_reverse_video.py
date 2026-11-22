@@ -119,7 +119,7 @@ class VideoAnalysis(unittest.TestCase):
 
     def test_cli_end_to_end(self):
         out = Path(self.td.name) / "out"
-        code = rv.main([str(self.path), "--transcript", str(FIX / "demo.srt"), "--out", str(out)])
+        code = rv.main([str(self.path), "--transcript", str(FIX / "demo.srt"), "--out", str(out), "--local-report"])
         self.assertEqual(code, 0)
         d = out / "synthetic"
         for f in ("analysis.json", "script.md", "SKILL.md", "report.html"):

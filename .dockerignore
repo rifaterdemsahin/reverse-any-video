@@ -12,3 +12,8 @@ __pycache__
 cookies.txt
 docs/app.html
 docs/build.py
+admin
+outputs
+schemas
+tests
+fly.toml

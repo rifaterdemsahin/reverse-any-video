@@ -66,12 +66,13 @@ class Pages(unittest.TestCase):
 
     def test_dockerfile_copies_every_page_and_module(self):
         dockerfile = (ROOT / "Dockerfile").read_text()
-        for name in PAGES + ["menu.js", "index.html"]:
-            self.assertIn(f"docs/{name}" if name != "app.html" else "docs/index.html", dockerfile, name)
-        for module in ["server.py", "reverse_video.py", "reverse_llm.py", "deepinfra.py", "template.py",
-                       "pricing.py", "storage.py", "vault.py", "gmail.py", "accounts.py", "payments.py"]:
-            self.assertIn(module, dockerfile, module)
-
+        self.assertIn("COPY *.py ./", dockerfile)          # every module at the top level
+        self.assertIn("COPY docs/ ./docs/", dockerfile)    # every page
+        ignored = (ROOT / ".dockerignore").read_text().split()
+        for name in ["app.html", "build.py"]:
+            self.assertIn(f"docs/{name}", ignored, name)    # source files that are not served
+        for module in ["server.py", "reverse_video.py", "hyperframes_project.py", "handbook.py", "storyboard_png.py"]:
+            self.assertTrue((ROOT / module).exists(), module)
 
 if __name__ == "__main__":
     unittest.main()

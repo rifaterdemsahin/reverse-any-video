@@ -564,7 +564,7 @@ def report_html(meta: dict, script: dict, video: dict, segs: list[dict]) -> str:
 def run(source: str | None, out_root: Path | str = "out", transcript_text: str | None = None,
         video_file: Path | str | None = None, download: bool = False, cookies: str | None = None,
         scene_threshold: float = 0.3, frames: bool = True, max_duration: int | None = None,
-        job_id: str | None = None, log=None, title: str | None = None) -> dict:
+        job_id: str | None = None, log=None, title: str | None = None, local_report: bool = False) -> dict:
     """Analyse one video and write the four output files. Returns a summary dict.
 
     `source` is a URL, a local video path, or None to analyse `transcript_text` alone.
@@ -653,10 +653,11 @@ def run(source: str | None, out_root: Path | str = "out", transcript_text: str |
 
     analysis = {"meta": meta, "transcript_format": fmt, "script": script, "llm": llm,
                 "video": {k: v for k, v in video.items() if k != "frames"}, "segments": segs}
-    (out / "analysis.json").write_text(json.dumps(analysis, indent=2, ensure_ascii=False))
-    (out / "transcript_script.md").write_text(script_md(meta, segs, script))   # internal: quotes the transcript
-    (out / "SKILL.md").write_text(blueprint_md(meta, script, video))
-    (out / "report.html").write_text(report_html(meta, script, video, segs))
+    if local_report:   # the transcript files, for the command line only. Never written by the server.
+        (out / "analysis.json").write_text(json.dumps(analysis, indent=2, ensure_ascii=False))
+        (out / "transcript_script.md").write_text(script_md(meta, segs, script))
+        (out / "SKILL.md").write_text(blueprint_md(meta, script, video))
+        (out / "report.html").write_text(report_html(meta, script, video, segs))
     return {"out_dir": str(out), "analysis": analysis, "frames": video.get("frames", []),
             "has_transcript": bool(segs), "has_video": bool(video_path)}
 
@@ -671,13 +672,18 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--scene-threshold", type=float, default=0.3, help="ffmpeg scene score for a cut (default 0.3)")
     ap.add_argument("--max-duration", type=int, help="skip downloading videos longer than this many seconds")
     ap.add_argument("--no-frames", action="store_true", help="skip the keyframe contact sheet")
+    ap.add_argument("--local-report", action="store_true",
+                    help="also write analysis.json, transcript_script.md, SKILL.md and report.html (contain transcript text)")
     ap.add_argument("--out", default="out", help="output directory (default: out)")
     a = ap.parse_args(argv)
 
     transcript = Path(a.transcript).read_text(encoding="utf-8", errors="replace") if a.transcript else None
     r = run(a.source, a.out, transcript, a.video, a.download, a.cookies, a.scene_threshold,
-            not a.no_frames, a.max_duration)
-    print(f"wrote {r['out_dir']}/analysis.json, transcript_script.md, SKILL.md, report.html")
+            not a.no_frames, a.max_duration, local_report=a.local_report)
+    if a.local_report:
+        print(f"wrote {r['out_dir']}/analysis.json, transcript_script.md, SKILL.md, report.html")
+    else:
+        print(f"wrote the deliverables to {r['out_dir']} (add --local-report for the transcript files)")
     if not r["has_transcript"] and not r["has_video"]:
         print("No transcript or video was available, so only metadata was saved. "
               "Pass --transcript FILE and/or --video FILE.", file=sys.stderr)
