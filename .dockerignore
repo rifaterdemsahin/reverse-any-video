@@ -1,0 +1,14 @@
+.git
+.github
+.claude
+out
+examples
+tests
+__pycache__
+*.pyc
+*.mp4
+*.webm
+*.mkv
+cookies.txt
+docs/app.html
+docs/build.py

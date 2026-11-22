@@ -1,4 +1,11 @@
-# All optional: reverse_video.py runs on the standard library alone.
-yt-dlp>=2025.1.1               # metadata, captions, and --download
-youtube-transcript-api>=1.0.0  # caption fallback
-# ffmpeg/ffprobe (system package) enable shot-cut, silence and keyframe analysis.
+# Runtime dependencies for the CLI (reverse_video.py) and the web server (server.py).
+# reverse_video.py itself runs on the standard library; these add fetching and the API.
+# System packages: ffmpeg (shot cuts, silences, keyframes). The Dockerfile installs it.
+
+fastapi>=0.115,<1
+uvicorn[standard]>=0.30,<1
+python-multipart>=0.0.9        # form and file uploads for POST /api/jobs
+
+yt-dlp[default]>=2025.10.22    # metadata, captions, downloads; keep current, YouTube changes often
+deno>=2.4                      # JavaScript runtime yt-dlp needs to read YouTube
+youtube-transcript-api>=1.2    # caption fallback

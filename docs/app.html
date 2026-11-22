@@ -81,6 +81,10 @@ label.file span { font-size: 13px; color: var(--muted) }
 .progress i { display: block; height: 100%; width: 0; background: var(--mark) }
 .status { font: 12px/1.4 var(--mono); color: var(--muted); min-height: 1.4em }
 .status.err { color: var(--rec) }
+.server { display: grid; gap: 10px; border: 1px solid var(--line); border-radius: 8px; padding: 14px; background: var(--panel) }
+.server .check { display: flex; gap: 8px; align-items: flex-start; font-size: 14px }
+.server .check input { margin-top: 3px }
+.files { display: flex; flex-wrap: wrap; gap: 6px 12px; font: 13px var(--mono) }
 .example { font: 500 11px var(--mono); background: var(--mark); color: var(--mark-ink); padding: 3px 6px; border-radius: 3px }
 
 /* Readouts */
@@ -180,6 +184,13 @@ footer { color: var(--muted); font-size: 14px; display: grid; gap: 8px; max-widt
         <div class="field">
           <label class="label" for="url">URL</label>
           <input type="text" id="url" placeholder="https://www.youtube.com/watch?v=…">
+        </div>
+        <div id="server-box" class="server" hidden>
+          <span class="label">Server · fetch the URL for me</span>
+          <label class="check" for="srv-download"><input type="checkbox" id="srv-download" checked> Download the video and detect cuts with ffmpeg</label>
+          <div class="field" id="srv-token-wrap" hidden><label class="label" for="srv-token">Access token</label><input type="text" id="srv-token" autocomplete="off"></div>
+          <button id="srv-run" type="button">Fetch and analyze URL</button>
+          <div id="srv-files" class="files"></div>
         </div>
         <label class="file" for="tfile"><b>Load a transcript file</b><span>.vtt, .srt, .json, .txt</span>
           <input type="file" id="tfile" accept=".vtt,.srt,.json,.json3,.txt,text/*,application/json"></label>
@@ -553,5 +564,57 @@ $("copy").addEventListener("click", async () => {
   catch (e) { const r = document.createRange(); r.selectNodeContents($("blueprint")); const sel = getSelection(); sel.removeAllRanges(); sel.addRange(r); $("copy").textContent = "Selected, press Ctrl+C"; }
   setTimeout(() => { $("copy").textContent = "Copy"; }, 2000);
 });
+/* ---------- server mode: only when served by server.py ---------- */
+const fromServer = (r) => {
+  const v = r.analysis.video;
+  if (!v || !v.shots) return null;
+  return { duration: v.duration_s, step: 0, cuts: v.cuts, bounds: [0, ...v.cuts, v.duration_s], shots: v.shots, avg: v.shot_avg_s,
+    median: v.shot_median_s, min: v.shot_min_s, max: v.shot_max_s, cpm: v.cuts_per_min, per30: v.cuts_30s, firstCut: v.first_cut_s,
+    frames: (r.frames || []).map((f) => ({ t: f.t, url: "data:image/jpeg;base64," + f.jpg })), name: "the server (ffmpeg)" };
+};
+(async () => {
+  try {
+    const r = await fetch("api/health", { cache: "no-store" });
+    if (!r.ok) return;
+    const h = await r.json();
+    if (h.service !== "reverse-any-video") return;
+    $("server-box").hidden = false; $("srv-token-wrap").hidden = !h.auth_required;
+    if (!h.ffmpeg) { $("srv-download").checked = false; $("srv-download").disabled = true; }
+  } catch (e) { /* static hosting: no server */ }
+})();
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+$("srv-run").addEventListener("click", async () => {
+  const url = $("url").value.trim();
+  if (!/^https?:\/\//.test(url)) { status("Enter the video's URL in the URL field first.", true); $("url").focus(); return; }
+  const fd = new FormData(); fd.append("url", url); fd.append("download", $("srv-download").checked ? "true" : "false");
+  if ($("title").value.trim() && !$("title").value.startsWith("Demo")) fd.append("title", $("title").value.trim());
+  const headers = $("srv-token").value ? { "X-Access-Token": $("srv-token").value.trim() } : {};
+  $("srv-run").disabled = true; $("srv-files").innerHTML = ""; $("bar").style.width = "10%";
+  try {
+    const res = await fetch("api/jobs", { method: "POST", body: fd, headers });
+    const created = await res.json();
+    if (!res.ok) throw new Error(created.error || `Server answered ${res.status}.`);
+    let job, n = 0;
+    do {
+      await sleep(1500); n++;
+      job = await (await fetch(`api/jobs/${created.id}`, { cache: "no-store" })).json();
+      status(`Server: ${job.log[job.log.length - 1] || job.status}…`);
+      $("bar").style.width = Math.min(90, 10 + n * 3) + "%";
+    } while (job.status === "queued" || job.status === "running");
+    if (job.status === "error") throw new Error(job.error);
+    const a = job.result.analysis;
+    if (a.meta.title) $("title").value = a.meta.title;
+    if (a.segments.length) $("transcript").value = a.segments.map((s) => `${fmtT(s.start)}\n${s.text}`).join("\n");
+    video = fromServer(job.result) || video; $("clear-video").hidden = !video;
+    ["transcript", "title", "url"].forEach((id) => store.set("rav:" + id, $(id).value));
+    $("demo-flag").hidden = true; $("bar").style.width = "100%";
+    $("srv-files").innerHTML = Object.entries(job.files).map(([k, u]) => `<a href="${esc(u)}" target="_blank" rel="noopener">${esc(k)}</a>`).join("");
+    const missing = [!a.segments.length && "no captions", job.result.has_video ? null : $("srv-download").checked && "no video"].filter(Boolean);
+    status(missing.length ? `Done, with ${missing.join(" and ")}: ${job.log.filter((l) => /fail|could not|skipped/i.test(l)).join(" · ") || "see the server log"}. Paste the transcript to fill the gap.` : "Done. Transcript and cuts came from the server.", !!missing.length);
+    render();
+  } catch (err) { status(err.message, true); $("bar").style.width = "0"; }
+  finally { $("srv-run").disabled = false; }
+});
+
 render();
 </script>

@@ -1,0 +1,43 @@
+# Fly.io config. App names are global: change `app` if "reverse-any-video" is taken.
+# Deploy:  fly launch --copy-config --no-deploy  (first time),  then  fly deploy --ha=false
+app = "reverse-any-video"
+primary_region = "lhr"
+kill_signal = "SIGINT"
+kill_timeout = "30s"
+
+[build]
+  dockerfile = "Dockerfile"
+
+[env]
+  PORT = "8080"
+  DATA_DIR = "/tmp/rav-jobs"
+  WORKERS = "2"
+  MAX_UPLOAD_MB = "300"
+  MAX_DURATION = "1800"
+  JOB_TTL = "3600"
+  # ALLOWED_URL_HOSTS = "*"     # allow any yt-dlp site, not just YouTube
+  # Secrets (set with `fly secrets set`): YT_COOKIES, ACCESS_TOKEN
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  auto_stop_machines = "stop"
+  auto_start_machines = true
+  min_machines_running = 0
+  processes = ["app"]
+
+  [http_service.concurrency]
+    type = "requests"
+    soft_limit = 20
+    hard_limit = 30
+
+  [[http_service.checks]]
+    grace_period = "15s"
+    interval = "30s"
+    timeout = "5s"
+    method = "GET"
+    path = "/healthz"
+
+[[vm]]
+  size = "shared-cpu-2x"
+  memory = "1gb"

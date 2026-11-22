@@ -350,7 +350,8 @@ def oembed(url: str) -> dict:
             "thumbnail": d.get("thumbnail_url"), "source": "oembed"}
 
 
-def fetch_youtube(url: str, workdir: Path, cookies: str | None, download: bool, log) -> tuple[dict, str | None, Path | None]:
+def fetch_youtube(url: str, workdir: Path, cookies: str | None, download: bool, log,
+                  max_duration: int | None = None) -> tuple[dict, str | None, Path | None]:
     """Return (metadata, raw_transcript_or_None, video_path_or_None)."""
     vid = youtube_id(url)
     meta: dict = {"id": vid, "url": url}
@@ -358,10 +359,13 @@ def fetch_youtube(url: str, workdir: Path, cookies: str | None, download: bool, 
     video_path = None
     ytdlp = shutil.which("yt-dlp")
     if ytdlp:
-        cmd = [ytdlp, "--skip-download", "--write-info-json", "--write-subs", "--write-auto-subs",
-               "--sub-langs", "en.*,en", "--sub-format", "json3", "-o", str(workdir / "src.%(ext)s"), url]
+        base = [ytdlp]
+        if not shutil.which("deno") and shutil.which("node"):
+            base += ["--js-runtimes", "node"]      # yt-dlp needs a JS runtime for YouTube
         if cookies:
-            cmd[1:1] = ["--cookies", cookies]
+            base += ["--cookies", cookies]
+        cmd = [*base, "--skip-download", "--write-info-json", "--write-subs", "--write-auto-subs",
+               "--sub-langs", "en.*,en", "--sub-format", "json3", "-o", str(workdir / "src.%(ext)s"), url]
         r = _run(cmd)
         info_file = workdir / "src.info.json"
         if info_file.exists():
@@ -378,11 +382,12 @@ def fetch_youtube(url: str, workdir: Path, cookies: str | None, download: bool, 
                 log(f"captions: {subs[0].name}")
         else:
             log("yt-dlp could not read the video: " + (r.stderr.strip().splitlines() or ["?"])[-1])
-        if download:
-            dcmd = [ytdlp, "-f", "bv*[height<=480]+ba/b[height<=480]/b", "--merge-output-format", "mp4",
+        too_long = max_duration and (meta.get("duration_s") or 0) > max_duration
+        if download and too_long:
+            log(f"skipped download: video is longer than {max_duration} s")
+        elif download:
+            dcmd = [*base, "-f", "bv*[height<=480]+ba/b[height<=480]/b", "--merge-output-format", "mp4",
                     "-o", str(workdir / "video.%(ext)s"), url]
-            if cookies:
-                dcmd[1:1] = ["--cookies", cookies]
             _run(dcmd)
             found = list(workdir.glob("video.*"))
             video_path = found[0] if found else None
@@ -548,43 +553,42 @@ def report_html(meta: dict, script: dict, video: dict, segs: list[dict]) -> str:
 # CLI                                                                         #
 # --------------------------------------------------------------------------- #
 
-def main(argv: list[str] | None = None) -> int:
-    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("source", help="YouTube URL or path to a local video file")
-    ap.add_argument("--transcript", help="transcript file (VTT, SRT, json3, JSON, or YouTube 'Show transcript' copy)")
-    ap.add_argument("--video", help="local video file to analyse alongside a URL")
-    ap.add_argument("--download", action="store_true", help="download the video (≤480p) with yt-dlp for cut analysis")
-    ap.add_argument("--cookies", help="cookies.txt for yt-dlp, if YouTube asks you to sign in")
-    ap.add_argument("--scene-threshold", type=float, default=0.3, help="ffmpeg scene score for a cut (default 0.3)")
-    ap.add_argument("--no-frames", action="store_true", help="skip the keyframe contact sheet")
-    ap.add_argument("--out", default="out", help="output directory (default: out)")
-    a = ap.parse_args(argv)
+def run(source: str | None, out_root: Path | str = "out", transcript_text: str | None = None,
+        video_file: Path | str | None = None, download: bool = False, cookies: str | None = None,
+        scene_threshold: float = 0.3, frames: bool = True, max_duration: int | None = None,
+        job_id: str | None = None, log=None, title: str | None = None) -> dict:
+    """Analyse one video and write the four output files. Returns a summary dict.
 
-    log = lambda m: print(f"· {m}", file=sys.stderr)  # noqa: E731
-    is_url = re.match(r"https?://", a.source) is not None
-    vid = youtube_id(a.source) if is_url else Path(a.source).stem
-    out = Path(a.out) / (vid or "video")
+    `source` is a URL, a local video path, or None to analyse `transcript_text` alone.
+    Used by the CLI and by server.py.
+    """
+    log = log or (lambda m: print(f"· {m}", file=sys.stderr))
+    is_url = bool(source) and re.match(r"https?://", source) is not None
+    vid = youtube_id(source) if is_url else (Path(source).stem if source else None)
+    out = Path(out_root) / (job_id or vid or "video")
     out.mkdir(parents=True, exist_ok=True)
 
-    meta, raw, video_path = {"id": vid, "url": a.source if is_url else None, "title": None}, None, None
+    meta, raw, video_path = {"id": vid, "url": source if is_url else None, "title": None}, None, None
     if is_url:
         with tempfile.TemporaryDirectory() as td:
-            meta, raw, dl = fetch_youtube(a.source, Path(td), a.cookies, a.download, log)
+            meta, raw, dl = fetch_youtube(source, Path(td), cookies, download, log, max_duration)
             if dl:
                 video_path = out / dl.name
                 shutil.move(str(dl), video_path)
-    else:
-        video_path = Path(a.source)
+    elif source:
+        video_path = Path(source)
         meta["title"] = video_path.stem
-    if a.video:
-        video_path = Path(a.video)
-    if a.transcript:
-        raw = Path(a.transcript).read_text(encoding="utf-8", errors="replace")
+    if title and not meta.get("title"):
+        meta["title"] = title
+    if video_file:
+        video_path = Path(video_file)
+    if transcript_text:
+        raw = transcript_text
 
     segs, fmt = parse_transcript(raw) if raw else ([], None)
     if fmt:
         log(f"transcript: {len(segs)} segments ({fmt})")
-    video = analyze_video(video_path, a.scene_threshold, not a.no_frames) if video_path else {}
+    video = analyze_video(video_path, scene_threshold, frames) if video_path else {}
     if video_path:
         log(f"video: {video.get('shots')} shots, {video.get('cuts_per_min')} cuts/min")
     script = analyze_script(segs, video.get("duration_s") or meta.get("duration_s")) if segs else {}
@@ -595,8 +599,28 @@ def main(argv: list[str] | None = None) -> int:
     (out / "script.md").write_text(script_md(meta, segs, script))
     (out / "SKILL.md").write_text(blueprint_md(meta, script, video))
     (out / "report.html").write_text(report_html(meta, script, video, segs))
-    print(f"wrote {out}/analysis.json, script.md, SKILL.md, report.html")
-    if not segs and not video_path:
+    return {"out_dir": str(out), "analysis": analysis, "frames": video.get("frames", []),
+            "has_transcript": bool(segs), "has_video": bool(video_path)}
+
+
+def main(argv: list[str] | None = None) -> int:
+    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument("source", help="YouTube URL or path to a local video file")
+    ap.add_argument("--transcript", help="transcript file (VTT, SRT, json3, JSON, or YouTube 'Show transcript' copy)")
+    ap.add_argument("--video", help="local video file to analyse alongside a URL")
+    ap.add_argument("--download", action="store_true", help="download the video (≤480p) with yt-dlp for cut analysis")
+    ap.add_argument("--cookies", help="cookies.txt for yt-dlp, if YouTube asks you to sign in")
+    ap.add_argument("--scene-threshold", type=float, default=0.3, help="ffmpeg scene score for a cut (default 0.3)")
+    ap.add_argument("--max-duration", type=int, help="skip downloading videos longer than this many seconds")
+    ap.add_argument("--no-frames", action="store_true", help="skip the keyframe contact sheet")
+    ap.add_argument("--out", default="out", help="output directory (default: out)")
+    a = ap.parse_args(argv)
+
+    transcript = Path(a.transcript).read_text(encoding="utf-8", errors="replace") if a.transcript else None
+    r = run(a.source, a.out, transcript, a.video, a.download, a.cookies, a.scene_threshold,
+            not a.no_frames, a.max_duration)
+    print(f"wrote {r['out_dir']}/analysis.json, script.md, SKILL.md, report.html")
+    if not r["has_transcript"] and not r["has_video"]:
         print("No transcript or video was available, so only metadata was saved. "
               "Pass --transcript FILE and/or --video FILE.", file=sys.stderr)
         return 2
