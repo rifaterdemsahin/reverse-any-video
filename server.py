@@ -49,12 +49,14 @@ import shutil
 import threading
 import time
 import uuid
+import zipfile
+import io
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from urllib.parse import urlparse
 
 from fastapi import FastAPI, File, Form, Header, HTTPException, UploadFile
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, JSONResponse, Response
 
 import create_video as cv
 import reverse_video as rv
@@ -245,6 +247,24 @@ def get_job(job_id: str):
     if not job:
         raise HTTPException(404, "No such job. Jobs are kept for an hour and are lost on restart.")
     return _public(job)
+
+
+@app.get("/api/jobs/{job_id}/bundle")
+def get_bundle(job_id: str):
+    """All the deliverables of a finished job, in one zip. Source video and frames are never included."""
+    job = jobs.get(job_id)
+    if not job or job.get("status") != "done":
+        raise HTTPException(404, "No finished job with that id.")
+    d = Path(job["dir"])
+    names = [n for n in OUTPUT_FILES if (d / n).exists()]
+    if not names:
+        raise HTTPException(404, "This job has no files.")
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as z:
+        for n in names:
+            z.write(d / n, n)
+    return Response(buf.getvalue(), media_type="application/zip",
+                    headers={"Content-Disposition": f'attachment; filename="reverse-any-video-{job_id}.zip"'})
 
 
 @app.get("/api/jobs/{job_id}/files/{name}")

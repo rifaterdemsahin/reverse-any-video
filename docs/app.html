@@ -217,6 +217,15 @@ details summary { cursor: pointer; font-weight: 600; font-size: 14px; margin-bot
           <span class="label">Server · fetch the URL for me</span>
           <label class="check" for="srv-download"><input type="checkbox" id="srv-download" checked> Download the video and detect cuts with ffmpeg</label>
           <div class="field" id="srv-token-wrap" hidden><label class="label" for="srv-token">Access token</label><input type="text" id="srv-token" autocomplete="off"><p class="muted" style="font-size:12px;margin:6px 0 0">No token? Set a new one on the server with <code>TOKEN=$(openssl rand -hex 24) &amp;&amp; fly secrets set --app reverse-any-video ACCESS_TOKEN=$TOKEN &amp;&amp; echo "$TOKEN" | pbcopy &amp;&amp; echo copied</code>. Details on the <a href="/settings">settings page</a>.</p></div>
+          <div class="muted" style="font-size:13px;margin:8px 0"><b>You will get, as one zip:</b>
+            <ul style="margin:4px 0 0 18px">
+              <li><code>storyboard.md</code>: one panel per shot, what is on screen, camera and whether there is speech. Never the words. Needs an uploaded video and the AI key.</li>
+              <li><code>edit_decision_list.edl</code>: one event per shot, for any video editor. Needs an uploaded video.</li>
+              <li><code>metrics.json</code>: length, pace, cut rate, shot length and hook timing, as numbers.</li>
+              <li><code>hyperframes_prompt.md</code>: the style, the pacing and a prompt for each scene.</li>
+              <li><code>hyperframes_template.json</code>: the scene plan with placeholders for your own text.</li>
+            </ul>
+            <p style="margin:4px 0 0">A link gives the metrics, the HyperFrames prompt and the template. An upload gives all five. Not included: the source video, its frames and its transcript.</p></div>
           <button id="srv-run" type="button">Fetch and analyze URL</button>
           <div id="srv-files" class="files"></div>
         </div>
@@ -673,16 +682,13 @@ $("srv-run").addEventListener("click", async () => {
       $("bar").style.width = Math.min(90, 10 + n * 3) + "%";
     } while (job.status === "queued" || job.status === "running");
     if (job.status === "error") throw new Error(job.error);
-    const a = job.result.analysis;
-    if (a.meta.title) $("title").value = a.meta.title;
-    if (a.segments.length) $("transcript").value = a.segments.map((s) => `${fmtT(s.start)}\n${s.text}`).join("\n");
-    video = fromServer(job.result) || video; $("clear-video").hidden = !video;
-    ["transcript", "title", "url"].forEach((id) => store.set("rav:" + id, $(id).value));
-    $("demo-flag").hidden = true; $("bar").style.width = "100%";
-    $("srv-files").innerHTML = Object.entries(job.files).map(([k, u]) => `<a href="${esc(u)}" target="_blank" rel="noopener">${esc(k)}</a>`).join("");
-    const missing = [!a.segments.length && "no captions", job.result.has_video ? null : $("srv-download").checked && "no video"].filter(Boolean);
-    status(missing.length ? `Done, with ${missing.join(" and ")}: ${job.log.filter((l) => /fail|could not|skipped/i.test(l)).join(" · ") || "see the server log"}. Paste the transcript to fill the gap.` : "Done. Transcript and cuts came from the server.", !!missing.length);
-    render();
+    const llm = job.result.llm || [];
+    $("bar").style.width = "100%";
+    ["title", "url"].forEach((id) => store.set("rav:" + id, $(id).value));
+    $("demo-flag").hidden = true;
+    $("srv-files").innerHTML = `<p><a class="btn" href="api/jobs/${esc(job.id)}/bundle" download>⬇ Download all (.zip)</a></p>` +
+      Object.entries(job.files).map(([k, u]) => `<a href="${esc(u)}" download>${esc(k)}</a>`).join(" · ");
+    status(llm.length ? "Done. Download the zip above." : "Done. Download the zip above. The storyboard is missing because the server has no AI key.");
   } catch (err) { status(err.message, true); $("bar").style.width = "0"; }
   finally { $("srv-run").disabled = false; }
 });
