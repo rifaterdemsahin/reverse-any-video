@@ -702,6 +702,9 @@ function metrics() {
 }
 const createStatus = (m, err) => { $("create-status").textContent = m; $("create-status").classList.toggle("err", !!err); };
 const authHeaders = () => ($("srv-token").value ? { "X-Access-Token": $("srv-token").value.trim() } : {});
+// Remember the access token in this browser only (localStorage). It is never written into the page.
+try { const saved = localStorage.getItem("rav-token"); if (saved && $("srv-token")) $("srv-token").value = saved; } catch (e) { /* private window or blocked storage: type it each time */ }
+try { $("srv-token").addEventListener("input", (e) => { try { localStorage.setItem("rav-token", e.target.value.trim()); } catch (err) {} }); } catch (e) {}
 async function pollJob(id, onTick) {
   for (let n = 0; ; n++) {
     await sleep(n < 5 ? 1500 : 3000);
