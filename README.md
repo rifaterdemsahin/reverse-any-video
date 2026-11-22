@@ -1,7 +1,13 @@
 # reverse-any-video
 
-Reverse-engineer any video's **script** and **editing style** into numbers, then turn the numbers into a
-reusable `SKILL.md` blueprint for Claude.
+Reverse-engineer any video's **script** and **editing style** into numbers, turn the numbers into a
+reusable `SKILL.md` blueprint, then have Claude write a **new** video in that style and render it with
+[HyperFrames](https://hyperframes.heygen.com) on a [Fly.io Sprite](https://sprites.dev).
+
+```
+video ──► reverse_video.py ──► analysis.json + SKILL.md ──► Claude plan ──► HyperFrames project ──► MP4
+           (measure)              (blueprint)              (your touches)     (HTML + GSAP)      (local or Sprite)
+```
 
 Starting base: [How to reverse engineer any editing style (Turned it into a skill)](https://www.youtube.com/watch?v=KnqTiAXUH7M)
 by Taha El Harti. This repo is an independent, open implementation of the `/reverse-any-video` idea from that
@@ -18,7 +24,7 @@ video. See [`examples/KnqTiAXUH7M`](examples/KnqTiAXUH7M) for what has been capt
 | Calls to action ("subscribe", "link in the description") | Keyframe contact sheet, one frame per shot |
 | Questions, "you" vs "I", fillers, top vocabulary | |
 
-## Four ways to use it
+## Ways to use it
 
 ### 1. In the browser
 
@@ -71,6 +77,13 @@ exported from a browser that is signed in to YouTube (use a spare account):
 fly secrets set YT_COOKIES="$(cat cookies.txt)"
 ```
 
+To write scripts with Claude and render videos from the web page:
+
+```bash
+fly secrets set ANTHROPIC_API_KEY=sk-ant-...      # from platform.claude.com
+fly secrets set SPRITES_TOKEN=...                 # from sprites.dev/account
+```
+
 Optional: `fly secrets set ACCESS_TOKEN=...` so only people with the token can start jobs (the page asks for it).
 
 | Variable | Default | Meaning |
@@ -82,6 +95,10 @@ Optional: `fly secrets set ACCESS_TOKEN=...` so only people with the token can s
 | `ALLOWED_URL_HOSTS` | YouTube hosts | comma-separated, or `*` for any site yt-dlp supports |
 | `YT_COOKIES` | none | secret: cookies.txt contents |
 | `ACCESS_TOKEN` | none | secret: required in `X-Access-Token` to start jobs |
+| `ANTHROPIC_API_KEY` | none | secret: Claude writes the script (`CLAUDE_MODEL`, default `claude-opus-5-5`) |
+| `SPRITES_TOKEN` | none | secret: render on a Fly.io Sprite |
+| `RENDER_BACKEND` | auto | `sprite` when `SPRITES_TOKEN` is set, else `none`; or force `local` |
+| `SPRITE_NAME` | rav-render | the Sprite that renders |
 
 **Deploy on every push:** `.github/workflows/fly-deploy.yml` runs the tests, then `flyctl deploy` on `main`.
 Create a token with `fly tokens create deploy` and add it as the repository secret `FLY_API_TOKEN`. Until
@@ -90,6 +107,35 @@ the secret exists, the deploy step is skipped.
 **Run the server locally:** `pip install -r requirements.txt && uvicorn server:app --reload`, then open
 http://localhost:8000. The API is documented at `/api/docs`.
 
+### 5. Create a new video in the style
+
+`create_video.py` (and the **Create** section of the web page) takes the measurements, a brief and your
+touches, and produces a new video:
+
+1. **Plan:** Claude (`claude-opus-5-5`, structured JSON output) writes an original script: hook within the
+   measured hook time, the same section order, narration sized to the measured words per minute.
+2. **Build:** the plan becomes a HyperFrames project: `index.html` with a GSAP timeline, a punch-in on every
+   beat of the measured average shot length, burned-in captions, `script.md`, `captions.srt`.
+3. **Render:** `npx hyperframes render` makes the MP4, locally or on a Fly.io Sprite.
+
+```bash
+python create_video.py --analysis out/KnqTiAXUH7M/analysis.json \
+  --brief "Why small teams should automate their weekly report" \
+  --brand Acme --accent "#ff5a1f" --font "Space Grotesk" --aspect portrait --logo logo.png \
+  --tone "direct, no hype" --cta "Grab the template below" --render local
+python create_video.py --plan out/new-video/project/plan.json --render sprite   # re-render after editing
+```
+
+Your touches: `--brand --background --text --accent --font --aspect (landscape|portrait|square) --duration
+--logo --tone --cta --instructions --css FILE --no-captions`. The project is plain HTML, so open it with
+`npx hyperframes preview` to scrub the timeline and change anything by hand.
+
+| Render backend | Needs | Use when |
+|---|---|---|
+| `local` | Node.js 22+, FFmpeg, Chrome | your own machine |
+| `sprite` | `SPRITES_TOKEN` from [sprites.dev/account](https://sprites.dev/account) | the Fly.io app: renders run on a Sprite named `SPRITE_NAME` (default `rav-render`), which installs Node, FFmpeg, HyperFrames and Chrome on first use and keeps them |
+| `none` | nothing | you only want the project zip |
+
 ### API
 
 ```bash
@@ -97,6 +143,8 @@ curl -F url="https://www.youtube.com/watch?v=KnqTiAXUH7M" -F download=true https
 curl https://<app>.fly.dev/api/jobs/<id>                       # status, log, results
 curl https://<app>.fly.dev/api/jobs/<id>/files/SKILL.md        # also report.html, script.md, analysis.json
 curl -F video=@clip.mp4 -F transcript_file=@clip.srt https://<app>.fly.dev/api/jobs
+curl -F brief="..." -F metrics=@metrics.json -F touches='{"brand":"Acme"}' https://<app>.fly.dev/api/plans
+curl -F plan=@plan.json -F touches='{"brand":"Acme"}' -F logo=@logo.png https://<app>.fly.dev/api/renders
 ```
 
 ## Tests
@@ -107,7 +155,8 @@ python -m unittest discover -s tests -v
 ```
 
 The video tests build a synthetic clip with cuts at 2, 3.5, 6 and 8 s and a silent second at 4 s, then check
-that all four cuts and the silence are found.
+that all four cuts and the silence are found. The Claude and Sprite steps are tested against fakes; a real
+HyperFrames render runs with `RAV_RENDER_TEST=1` (needs Node 22+, FFmpeg, Chrome).
 
 ## Rebuilding the page
 

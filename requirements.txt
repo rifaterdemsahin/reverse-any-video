@@ -9,3 +9,7 @@ python-multipart>=0.0.9        # form and file uploads for POST /api/jobs
 yt-dlp[default]>=2025.10.22    # metadata, captions, downloads; keep current, YouTube changes often
 deno>=2.4                      # JavaScript runtime yt-dlp needs to read YouTube
 youtube-transcript-api>=1.2    # caption fallback
+
+anthropic>=2.12                # Claude writes the new video's script (create_video.py)
+sprites-py>=0.7.2              # Fly.io Sprites: remote HyperFrames renders
+# Rendering itself uses the hyperframes npm package (Node 22+, FFmpeg, Chrome) on a Sprite or locally.

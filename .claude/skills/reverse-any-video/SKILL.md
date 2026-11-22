@@ -49,3 +49,18 @@ timings as ranges taken from the measurements, a section template with target le
 original as the worked example, and an editing checklist. Keep the numbers; cut generic advice.
 
 Offer to save it as `.claude/skills/<name>-style/SKILL.md` so the style can be reused with `/<name>-style`.
+
+## 5. Make a new video in the style (optional)
+
+Ask the user for a brief and their touches (brand, colours, font, logo, tone, final call to action, own
+instructions). Then either:
+
+- write the plan yourself as JSON in the shape of `tests/fixtures/demo_plan.json`, following the blueprint's
+  hook, section order and words per minute, save it as `plan.json`, and run
+  `python create_video.py --plan plan.json --brand ... --accent "#hex" --render local`; or
+- with `ANTHROPIC_API_KEY` set, let the script write it:
+  `python create_video.py --analysis out/<id>/analysis.json --brief "..." --render local`.
+
+The output is a HyperFrames project (`out/new-video/project/`, editable HTML + GSAP) plus `video.mp4`.
+`--render sprite` renders on a Fly.io Sprite instead (needs `SPRITES_TOKEN`). Look at a few frames
+(`ffmpeg -ss 5 -i video.mp4 -frames:v 1 f.jpg`) before you call it done.

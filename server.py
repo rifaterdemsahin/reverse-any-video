@@ -4,7 +4,10 @@
   GET  /healthz, /api/health      health and capability check
   POST /api/jobs                  start an analysis (multipart form, see below)
   GET  /api/jobs/{id}             job status, log and results
-  GET  /api/jobs/{id}/files/{f}   report.html, SKILL.md, script.md or analysis.json
+  GET  /api/jobs/{id}/files/{f}   report.html, SKILL.md, script.md, analysis.json,
+                                  plan.json, captions.srt, project.zip, video.mp4
+  POST /api/plans                 Claude writes a new script in the measured style
+  POST /api/renders               build a HyperFrames project from a plan and render it
 
 POST /api/jobs fields (at least one of url, transcript, transcript_file, video):
   url              video URL (YouTube by default, see ALLOWED_URL_HOSTS)
@@ -23,9 +26,14 @@ Environment:
   ALLOWED_URL_HOSTS  comma-separated hosts, or * for any (default: YouTube hosts)
   ACCESS_TOKEN       if set, /api/jobs requires header X-Access-Token
   YT_COOKIES         contents of a cookies.txt, for when YouTube asks to sign in
+  ANTHROPIC_API_KEY  for POST /api/plans (Claude writes the script)
+  RENDER_BACKEND     auto (default), sprite, local or none
+  SPRITES_TOKEN      Fly.io Sprites token: renders run on a Sprite (SPRITE_NAME, default rav-render)
+  RENDER_WORKERS     renders at once (default 1)
 """
 from __future__ import annotations
 
+import json
 import os
 import re
 import secrets
@@ -40,6 +48,7 @@ from urllib.parse import urlparse
 from fastapi import FastAPI, File, Form, Header, HTTPException, UploadFile
 from fastapi.responses import FileResponse, JSONResponse
 
+import create_video as cv
 import reverse_video as rv
 
 ROOT = Path(__file__).resolve().parent
@@ -53,7 +62,10 @@ ALLOWED = {h.strip().lower() for h in os.environ.get(
     "ALLOWED_URL_HOSTS", "youtube.com,www.youtube.com,m.youtube.com,youtu.be,music.youtube.com").split(",") if h.strip()}
 ACCESS_TOKEN = os.environ.get("ACCESS_TOKEN") or None
 OUTPUT_FILES = {"report.html": "text/html", "SKILL.md": "text/markdown", "script.md": "text/markdown",
-                "analysis.json": "application/json"}
+                "analysis.json": "application/json", "plan.json": "application/json",
+                "captions.srt": "text/plain", "project.zip": "application/zip", "video.mp4": "video/mp4"}
+LOGO_TYPES = {".png", ".jpg", ".jpeg", ".svg", ".webp"}
+QUALITIES = {"draft", "looks", "delivery", "standard", "high"}
 
 DATA.mkdir(parents=True, exist_ok=True)
 COOKIES: str | None = None
@@ -65,6 +77,7 @@ if os.environ.get("YT_COOKIES"):
 
 app = FastAPI(title="reverse-any-video", docs_url="/api/docs", redoc_url=None)
 pool = ThreadPoolExecutor(max_workers=WORKERS)
+render_pool = ThreadPoolExecutor(max_workers=int(os.environ.get("RENDER_WORKERS", "1")))
 jobs: dict[str, dict] = {}
 lock = threading.Lock()
 
@@ -73,6 +86,8 @@ def capabilities() -> dict:
     return {"service": "reverse-any-video", "ok": True, "ffmpeg": bool(shutil.which("ffmpeg")),
             "yt_dlp": bool(shutil.which("yt-dlp")), "js_runtime": bool(shutil.which("deno") or shutil.which("node")),
             "cookies": COOKIES is not None, "auth_required": ACCESS_TOKEN is not None,
+            "llm": bool(os.environ.get("ANTHROPIC_API_KEY") or os.environ.get("ANTHROPIC_AUTH_TOKEN")),
+            "model": cv.MODEL, "render_backend": cv.pick_backend(), "fonts": cv.FONTS, "aspects": list(cv.ASPECTS),
             "max_upload_mb": MAX_UPLOAD // (1024 * 1024), "max_duration_s": MAX_DURATION,
             "allowed_url_hosts": sorted(ALLOWED), "queued_or_running": sum(j["status"] in ("queued", "running") for j in jobs.values())}
 
@@ -175,7 +190,8 @@ def create_job(url: str = Form(""), download: bool = Form(False), transcript: st
 def _public(job: dict) -> dict:
     out = {k: job[k] for k in ("id", "status", "log", "error", "result")}
     if job["status"] == "done":
-        out["files"] = {name: f"/api/jobs/{job['id']}/files/{name}" for name in OUTPUT_FILES}
+        d = Path(job["dir"])
+        out["files"] = {name: f"/api/jobs/{job['id']}/files/{name}" for name in OUTPUT_FILES if (d / name).exists()}
     return out
 
 
@@ -196,6 +212,110 @@ def get_file(job_id: str, name: str):
     if not path.exists():
         raise HTTPException(404, "Not ready yet.")
     return FileResponse(path, media_type=OUTPUT_FILES[name])
+
+
+# --------------------------------------------------------------------------- #
+# Create: plan with Claude, then render with HyperFrames                      #
+# --------------------------------------------------------------------------- #
+
+def _json_form(value: str, name: str) -> dict:
+    try:
+        data = json.loads(value or "{}")
+    except json.JSONDecodeError as e:
+        raise HTTPException(400, f"{name} is not valid JSON: {e.msg}")
+    if not isinstance(data, dict):
+        raise HTTPException(400, f"{name} must be a JSON object.")
+    return data
+
+
+def _new_job(kind: str) -> dict:
+    _cleanup()
+    job_id = uuid.uuid4().hex[:12]
+    job_dir = DATA / job_id
+    job_dir.mkdir(parents=True)
+    job = {"id": job_id, "kind": kind, "status": "queued", "created": time.time(), "dir": str(job_dir),
+           "log": [], "error": None, "result": None, "finished": None}
+    with lock:
+        jobs[job_id] = job
+    return job
+
+
+def _work_plan(job: dict, brief: str, blueprint: str, metrics: dict, touches: dict):
+    job.update(status="running", started=time.time())
+    try:
+        job["log"].append(f"plan: asking {cv.MODEL}")
+        plan = cv.write_plan(metrics, blueprint, brief, touches)
+        (Path(job["dir"]) / "plan.json").write_text(json.dumps({"plan": plan, "touches": touches, "metrics": metrics}, indent=2))
+        job["log"].append(f"plan: {len(plan['scenes'])} scenes")
+        job.update(status="done", result={"plan": plan, "touches": touches, "metrics": metrics})
+    except Exception as e:  # noqa: BLE001
+        job.update(status="error", error=f"{type(e).__name__}: {e}")
+    finally:
+        job["finished"] = time.time()
+
+
+@app.post("/api/plans", status_code=202)
+def create_plan(brief: str = Form(...), blueprint: str = Form(""), metrics: str = Form("{}"),
+                touches: str = Form("{}"), x_access_token: str | None = Header(None)):
+    _check_token(x_access_token)
+    if not brief.strip():
+        raise HTTPException(400, "Describe the new video in brief.")
+    m, t = _json_form(metrics, "metrics"), cv.clean_touches(_json_form(touches, "touches"))
+    job = _new_job("plan")
+    pool.submit(_work_plan, job, brief[:4000], blueprint[:40000], m, t)
+    return {"id": job["id"], "status": "queued", "status_url": f"/api/jobs/{job['id']}"}
+
+
+def _work_render(job: dict, plan: dict, touches: dict, metrics: dict, logo: Path | None, quality: str):
+    job.update(status="running", started=time.time())
+    d = Path(job["dir"])
+    try:
+        project = cv.build_project(plan, touches, metrics, d / "project", logo)
+        cv.zip_project(project, d / "project.zip")
+        for name in ("plan.json", "script.md", "captions.srt"):
+            shutil.copy(project / name, d / name)
+        backend = cv.pick_backend()
+        job["log"].append(f"built HyperFrames project; render backend: {backend}")
+        video = cv.render(project, d / "video.mp4", backend, quality, job=job["id"], log=job["log"].append)
+        shutil.rmtree(project, ignore_errors=True)
+        job.update(status="done", result={"backend": backend, "video": bool(video),
+                                          "timeline": cv.timeline(cv.validate_plan(plan), metrics)})
+    except Exception as e:  # noqa: BLE001
+        job.update(status="error", error=f"{type(e).__name__}: {e}")
+    finally:
+        job["finished"] = time.time()
+
+
+@app.post("/api/renders", status_code=202)
+def create_render(plan: str = Form(...), touches: str = Form("{}"), metrics: str = Form("{}"),
+                  quality: str = Form("draft"), logo: UploadFile | None = File(None),
+                  x_access_token: str | None = Header(None)):
+    _check_token(x_access_token)
+    p = _json_form(plan, "plan")
+    try:
+        p = cv.validate_plan(p.get("plan", p))
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+    t, m = cv.clean_touches(_json_form(touches, "touches")), _json_form(metrics, "metrics")
+    if quality not in QUALITIES:
+        raise HTTPException(400, f"quality must be one of {', '.join(sorted(QUALITIES))}")
+    job = _new_job("render")
+    logo_path = None
+    if logo is not None and logo.filename:
+        ext = Path(logo.filename).suffix.lower()
+        if ext not in LOGO_TYPES:
+            shutil.rmtree(job["dir"], ignore_errors=True)
+            jobs.pop(job["id"], None)
+            raise HTTPException(400, f"Logo must be one of {', '.join(sorted(LOGO_TYPES))}.")
+        data = logo.file.read(5 * 1024 * 1024 + 1)
+        if len(data) > 5 * 1024 * 1024:
+            shutil.rmtree(job["dir"], ignore_errors=True)
+            jobs.pop(job["id"], None)
+            raise HTTPException(413, "Logo is larger than 5 MB.")
+        logo_path = Path(job["dir"]) / f"logo{ext}"
+        logo_path.write_bytes(data)
+    render_pool.submit(_work_render, job, p, t, m, logo_path, quality)
+    return {"id": job["id"], "status": "queued", "status_url": f"/api/jobs/{job['id']}"}
 
 
 @app.get("/")

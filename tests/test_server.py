@@ -20,6 +20,7 @@ except ImportError:  # pragma: no cover
 _tmp = tempfile.TemporaryDirectory()
 os.environ["DATA_DIR"] = _tmp.name
 os.environ["ACCESS_TOKEN"] = "test-token"
+os.environ["RENDER_BACKEND"] = "none"
 
 
 @unittest.skipUnless(TestClient, "fastapi/httpx not installed")
@@ -91,6 +92,48 @@ class Api(unittest.TestCase):
         self.assertEqual(len(j["result"]["frames"]), 2)
         leftover = sorted(p.name for p in Path(self.server.jobs[j["id"]]["dir"]).iterdir())
         self.assertEqual(leftover, ["SKILL.md", "analysis.json", "report.html", "script.md"])
+
+
+    def test_plan_job_uses_claude_step(self):
+        import json
+        from unittest import mock
+        plan = json.loads((FIX / "demo_plan.json").read_text())
+        with mock.patch.object(self.server.cv, "write_plan", return_value=plan) as wp:
+            r = self.c.post("/api/plans", headers=self.h, data={
+                "brief": "Automate the weekly report", "blueprint": "# bp",
+                "metrics": json.dumps({"wpm": 150}), "touches": json.dumps({"accent": "#ff5a1f", "font": "Nope"})})
+            self.assertEqual(r.status_code, 202, r.text)
+            j = self.wait(r.json()["id"])
+        self.assertEqual(j["status"], "done", j)
+        args = wp.call_args.args
+        self.assertEqual(args[2], "Automate the weekly report")
+        self.assertEqual(args[3]["font"], "Inter")          # touches were cleaned
+        self.assertEqual(len(j["result"]["plan"]["scenes"]), 5)
+        self.assertIn("plan.json", j["files"])
+        self.assertEqual(self.c.post("/api/plans", headers=self.h, data={"brief": "x", "metrics": "[1"}).status_code, 400)
+
+    def test_render_job_builds_project(self):
+        import io
+        import json
+        import zipfile
+        plan = (FIX / "demo_plan.json").read_text()
+        r = self.c.post("/api/renders", headers=self.h,
+                        data={"plan": plan, "touches": json.dumps({"brand": "Acme"}), "metrics": json.dumps({"wpm": 150})},
+                        files={"logo": ("logo.png", b"\x89PNG", "image/png")})
+        self.assertEqual(r.status_code, 202, r.text)
+        j = self.wait(r.json()["id"])
+        self.assertEqual(j["status"], "done", j)
+        self.assertEqual(j["result"]["backend"], "none")
+        self.assertFalse(j["result"]["video"])
+        self.assertNotIn("video.mp4", j["files"])
+        z = zipfile.ZipFile(io.BytesIO(self.c.get(j["files"]["project.zip"]).content))
+        self.assertIn("assets/logo.png", z.namelist())
+        self.assertIn("index.html", z.namelist())
+        self.assertIn("-->", self.c.get(j["files"]["captions.srt"]).text)
+        bad = self.c.post("/api/renders", headers=self.h, data={"plan": json.dumps({"scenes": []})})
+        self.assertEqual(bad.status_code, 400)
+        bad = self.c.post("/api/renders", headers=self.h, data={"plan": plan}, files={"logo": ("x.exe", b"MZ", "application/octet-stream")})
+        self.assertEqual(bad.status_code, 400)
 
 
 if __name__ == "__main__":

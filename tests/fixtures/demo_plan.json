@@ -1,0 +1,11 @@
+{
+  "title": "Your weekly report, written for you",
+  "logline": "A demo plan in the measured style: hook, three steps, one stat, one ask.",
+  "scenes": [
+    {"kind": "title", "headline": "Stop writing the weekly report", "body": "Let it write itself in 3 steps", "items": [], "stat": "", "narration": "Stop writing the weekly report by hand. In the next minute I'll show you how to make it write itself."},
+    {"kind": "point", "headline": "The problem", "body": "Every Friday, an hour goes into copying numbers between tabs.", "items": [], "stat": "", "narration": "Here's the problem. Every Friday, someone spends an hour copying numbers between tabs."},
+    {"kind": "list", "headline": "Three steps", "body": "", "items": ["Connect your sources", "Pick the numbers", "Schedule the send"], "stat": "", "narration": "So first, connect your sources. Next, pick the numbers that matter. Finally, schedule the send."},
+    {"kind": "stat", "headline": "hours back every quarter", "body": "", "items": [], "stat": "13", "narration": "One hour a week is thirteen hours a quarter."},
+    {"kind": "cta", "headline": "Try it this Friday", "body": "The template is in the description", "items": [], "stat": "", "narration": "Try it this Friday. The template is in the description."}
+  ]
+}
