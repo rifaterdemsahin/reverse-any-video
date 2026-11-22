@@ -78,26 +78,30 @@ def quote(usage: dict) -> dict:
     lines = [
         _line("LLM: vision (storyboard)", usage["vision_in_tokens"] / 1e6 * _rate("vision_in_per_m")
               + usage["vision_out_tokens"] / 1e6 * _rate("vision_out_per_m"),
-              f"{usage['vision_in_tokens']:,} input and {usage['vision_out_tokens']:,} output tokens"),
+              f"{usage['vision_in_tokens']:,} input and {usage['vision_out_tokens']:,} output tokens", short="AI reading the video"),
         _line("LLM: script and text", usage["text_in_tokens"] / 1e6 * _rate("text_in_per_m")
               + usage["text_out_tokens"] / 1e6 * _rate("text_out_per_m"),
-              f"{usage['text_in_tokens']:,} input and {usage['text_out_tokens']:,} output tokens"),
+              f"{usage['text_in_tokens']:,} input and {usage['text_out_tokens']:,} output tokens", short="AI writing the summary"),
         _line("Fly.io compute", usage["cpu_seconds"] * _rate("fly_per_s"),
-              f"{usage['cpu_seconds']:,} seconds on a 1 GB Fly.io machine"),
+              f"{usage['cpu_seconds']:,} seconds on a 1 GB Fly.io machine", short="Cloud processing"),
         _line("Azure Blob storage (video and frames)", usage["stored_gb"] * _rate("blob_gbp_per_gb_month") * RETAIN_MONTHS * FX_GBP_USD,
               f"{usage['stored_gb'] * 1024:.1f} MB kept in Azure for {RETAIN_MONTHS} month, "
-              f"converted at {FX_GBP_USD} USD per GBP. The video and frames stay with us, not with the customer"),
+              f"converted at {FX_GBP_USD} USD per GBP. The video and frames stay with us, not with the customer", short="Storage"),
     ]
     cost = sum(l["amount"] for l in lines)
     margin = cost * MARGIN
     before_fees = cost + margin
     stripe = (before_fees * STRIPE_PERCENT + STRIPE_FIXED) if STRIPE_PERCENT or STRIPE_FIXED else 0.0
-    price = _up(before_fees + stripe)
+    shown_costs = round(sum(l["display"] for l in lines), 2)
+    shown_margin = _cent_up(margin)
+    shown_fee = _cent_up(stripe)
+    price = round(shown_costs + shown_margin + shown_fee, 2)   # the customer pays exactly what they see
     return {
         "currency": "USD",
         "usage": usage,
         "lines": lines,
         "cost": _money(cost),
+        "shown": {"costs": shown_costs, "margin": shown_margin, "card_fee": shown_fee},
         "margin_percent": round(MARGIN * 100, 1),
         "margin": _money(margin),
         "card_fee_estimate": _money(stripe),
@@ -109,14 +113,21 @@ def quote(usage: dict) -> dict:
             "The source video and the frames are kept in our Azure storage for one month and are not delivered.",
             "Storage is charged for one month of retention.",
             "Usage is estimated from the video length. Real runs can differ by a few cents.",
+            "Each amount is rounded up to the next cent, and no amount is shown below $0.01.",
             f"Card fee estimate uses {STRIPE_PERCENT * 100:g}% + {STRIPE_FIXED:.2f} (verify against your Stripe plan).",
             f"Pounds converted at {FX_GBP_USD} USD per GBP (set FX_GBP_USD to today's rate).",
         ],
     }
 
 
-def _line(label: str, amount: float, detail: str) -> dict:
-    return {"label": label, "amount": _money(amount), "detail": detail}
+def _line(label: str, amount: float, detail: str, short: str = "") -> dict:
+    return {"label": label, "short": short or label, "amount": _money(amount),
+            "display": _cent_up(amount), "detail": detail}
+
+
+def _cent_up(x: float) -> float:
+    """What the customer sees: rounded up to the next cent, never below $0.01."""
+    return max(0.01, math.ceil(round(x * 100, 6)) / 100) if x > 0 else 0.01
 
 
 def _money(x: float) -> float:

@@ -14,11 +14,16 @@ class Quote(unittest.TestCase):
         q = p.quote(p.estimate(306.4))
         self.assertAlmostEqual(q["margin"], q["cost"] * 0.10, places=5)
 
-    def test_price_covers_cost_plus_margin_and_rounds_up_to_cents(self):
+    def test_price_is_exactly_what_the_customer_sees(self):
         q = p.quote(p.estimate(306.4))
-        self.assertGreaterEqual(q["price"], q["cost"] * 1.10)
+        self.assertEqual(q["price"], round(sum(l["display"] for l in q["lines"]) + q["shown"]["margin"] + q["shown"]["card_fee"], 2))
         self.assertEqual(round(q["price"], 2), q["price"])
-        self.assertEqual(q["price"], math.ceil(round((q["cost"] + q["margin"] + q["card_fee_estimate"]) * 100, 6)) / 100)
+        self.assertGreater(q["price"], q["cost"])
+
+    def test_no_line_is_shown_as_zero(self):
+        q = p.quote(p.estimate(5))                      # very short video: every line is tiny
+        self.assertTrue(all(l["display"] >= 0.01 for l in q["lines"]))
+        self.assertGreaterEqual(q["shown"]["margin"], 0.01)
 
     def test_longer_video_costs_more(self):
         short, long_ = p.quote(p.estimate(60)), p.quote(p.estimate(600))

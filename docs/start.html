@@ -77,9 +77,9 @@ td.n { text-align: right; white-space: nowrap; font-variant-numeric: tabular-num
     <p class="price" id="price"></p>
     <p class="note" id="summary"></p>
     <details>
-      <summary>How the price is worked out</summary>
+      <summary>What the price includes</summary>
       <table id="lines"></table>
-      <p class="note">Costs are our real cloud and AI costs for your video. We add 10% on top to cover our work. Card fees are added at checkout.</p>
+      <p class="note">The lines are our real cloud and AI costs for your video. We add 10% to cover our work. Amounts are rounded up to the next cent, and you pay the total shown.</p>
     </details>
     <p class="note" id="status"></p>
   </section>
@@ -104,7 +104,7 @@ td.n { text-align: right; white-space: nowrap; font-variant-numeric: tabular-num
 <script>
   const $ = (id) => document.getElementById(id);
   const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
-  const money = (n) => "$" + Number(n).toFixed(2);
+  const money = (n) => "$" + Number(Math.max(0.01, n)).toFixed(2);
 
   async function price() {
     const mins = Number($("mins").value);
@@ -119,10 +119,10 @@ td.n { text-align: right; white-space: nowrap; font-variant-numeric: tabular-num
       card.hidden = false;
       $("price").textContent = money(q.price) + " " + q.currency;
       $("summary").textContent = "For a " + mins + "-minute video, about " + q.usage.shots + " shots. No minimum charge.";
-      $("lines").innerHTML = q.lines.map((l) => `<tr><td>${esc(l.label)}<br><span class="muted">${esc(l.detail)}</span></td><td class="n">${money(l.amount)}</td></tr>`).join("") +
-        `<tr><td><b>Our real costs</b></td><td class="n"><b>${money(q.cost)}</b></td></tr>` +
-        `<tr><td>Our margin (${q.margin_percent}%)</td><td class="n">${money(q.margin)}</td></tr>` +
-        `<tr><td>Card fee (estimate)</td><td class="n">${money(q.card_fee_estimate)}</td></tr>`;
+      $("lines").innerHTML = q.lines.map((l) => `<tr><td>${esc(l.short)}</td><td class="n">${money(l.display)}</td></tr>`).join("") +
+        `<tr><td>Our margin (${q.margin_percent}%)</td><td class="n">${money(q.shown.margin)}</td></tr>` +
+        `<tr><td>Card fee</td><td class="n">${money(q.shown.card_fee)}</td></tr>` +
+        `<tr><td><b>Total</b></td><td class="n"><b>${money(q.price)}</b></td></tr>`;
     } catch (e) {
       card.hidden = false; $("price").textContent = ""; status.className = "note err"; status.textContent = e.message;
     } finally {
