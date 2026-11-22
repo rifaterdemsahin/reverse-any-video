@@ -1,0 +1,281 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "reverse-any-video/output-contract",
+  "title": "Reverse Any Video output contract",
+  "description": "What a finished job delivers, which inputs produce which files, and the shape of the JSON outputs. Machine-readable so an agent can ingest it. Never contains source text.",
+  "delivered_as": {
+    "bundle": "reverse-any-video-<job_id>.zip",
+    "endpoint": "GET /api/jobs/{job_id}/bundle",
+    "individual_files": "GET /api/jobs/{job_id}/files/{name}"
+  },
+  "never_delivered": [
+    "source video",
+    "frames (frames.zip)",
+    "transcript or any words from the source",
+    "analysis.json",
+    "segments",
+    "transcript_script.md (quotes the source)",
+    "SKILL.md",
+    "report.html"
+  ],
+  "files": [
+    {
+      "name": "script.md",
+      "format": "text/markdown",
+      "needs": [
+        "link",
+        "upload"
+      ],
+      "contents": "the script to write: one block per scene with the time and the target words. Narration is a placeholder."
+    },
+    {
+      "name": "prompter.md",
+      "format": "text/markdown",
+      "needs": [
+        "link",
+        "upload"
+      ],
+      "contents": "the script set out for a teleprompter, one block per scene, [pause] marks."
+    },
+    {
+      "name": "storyboard.png",
+      "format": "image/png",
+      "needs": [
+        "link",
+        "upload"
+      ],
+      "contents": "storyboard sheet, one card per scene. Made with DeepInfra image generation when available, otherwise drawn locally. Built from the template only."
+    },
+    {
+      "name": "metrics.json",
+      "format": "application/json",
+      "schema": "#/$defs/metrics",
+      "needs": [
+        "link",
+        "upload"
+      ],
+      "contents": "length, pace, cut rate, shot length and hook timing as numbers"
+    },
+    {
+      "name": "hyperframes_prompt.md",
+      "format": "text/markdown",
+      "needs": [
+        "link",
+        "upload"
+      ],
+      "contents": "Style and pacing, one prompt for the whole video, one prompt block per scene, and the placeholder list. Sections: '## Style and pacing', '## One prompt for the whole video', '## Scene prompts', '## Placeholders'."
+    },
+    {
+      "name": "hyperframes_template.json",
+      "format": "application/json",
+      "schema": "#/$defs/template",
+      "needs": [
+        "link",
+        "upload"
+      ],
+      "contents": "scene plan in create_video.py's schema, with placeholders such as {{headline_2}}, plus a timeline and style"
+    },
+    {
+      "name": "edit_decision_list.edl",
+      "format": "text/plain",
+      "needs": [
+        "upload"
+      ],
+      "contents": "CMX 3600 EDL, non-drop frame, one event per shot on track V, cut transitions. Event lines: 'NNN  AX       V     C        src_in src_out rec_in rec_out', then '* FROM CLIP NAME:  <name>'. Timecodes HH:MM:SS:FF."
+    },
+    {
+      "name": "storyboard.md",
+      "format": "text/markdown",
+      "needs": [
+        "upload",
+        "AI key on the server"
+      ],
+      "contents": "One section per sampled shot: '## Shot NNN · mm:ss.s to mm:ss.s · <clip name>', then bullets: Frame, On screen, Camera, Text on screen, Speech in shot (yes or no), Purpose. Never the words spoken."
+    }
+  ],
+  "availability": {
+    "link": "A link is read for captions and timing only. The video is not downloaded, so there are no shots: metrics.json, hyperframes_prompt.md and hyperframes_template.json only.",
+    "upload": "An uploaded video is analysed in full: all five files. storyboard.md also needs the AI key on the server."
+  },
+  "$defs": {
+    "metrics": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "duration_s": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "words": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "wpm": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "questions": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "hook_seconds": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "sections": {
+          "type": "integer"
+        },
+        "ctas": {
+          "type": "integer"
+        },
+        "shots": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "cuts_per_min": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "shot_avg_s": {
+          "type": [
+            "number",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "duration_s",
+        "words",
+        "wpm",
+        "questions",
+        "hook_seconds",
+        "sections",
+        "ctas",
+        "shots",
+        "cuts_per_min",
+        "shot_avg_s"
+      ]
+    },
+    "template": {
+      "type": "object",
+      "properties": {
+        "title": {
+          "type": "string"
+        },
+        "logline": {
+          "type": "string"
+        },
+        "scenes": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "kind": {
+                "enum": [
+                  "title",
+                  "point",
+                  "list",
+                  "stat",
+                  "quote",
+                  "cta"
+                ]
+              },
+              "headline": {
+                "type": "string"
+              },
+              "body": {
+                "type": "string"
+              },
+              "items": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "stat": {
+                "type": "string"
+              },
+              "narration": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "kind",
+              "headline",
+              "body",
+              "items",
+              "stat",
+              "narration"
+            ]
+          }
+        },
+        "timeline": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "scene": {
+                "type": "integer"
+              },
+              "role": {
+                "enum": [
+                  "hook",
+                  "body",
+                  "cta"
+                ]
+              },
+              "start_s": {
+                "type": "number"
+              },
+              "duration_s": {
+                "type": "number"
+              },
+              "target_words": {
+                "type": "integer"
+              },
+              "cuts": {
+                "type": [
+                  "integer",
+                  "null"
+                ]
+              }
+            }
+          }
+        },
+        "style": {
+          "type": "object"
+        },
+        "placeholders": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "title",
+        "logline",
+        "scenes",
+        "timeline",
+        "style",
+        "placeholders"
+      ]
+    }
+  }
+}

@@ -9,7 +9,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 DOCS = ROOT / "docs"
-PAGES = ["landing.html", "start.html", "pricing.html", "setup.html", "settings.html", "account.html", "app.html"]
+PAGES = ["landing.html", "start.html", "pricing.html", "setup.html", "settings.html", "account.html", "app.html", "admin-guide.html", "admin-sanity.html"]
 SECRET_PATTERNS = [r"sk_(test|live)_[A-Za-z0-9]{8,}", r"whsec_[A-Za-z0-9]{8,}", r"AKIA[0-9A-Z]{12,}",
                    r"-----BEGIN [A-Z ]*PRIVATE KEY-----", r"[0-9a-f]{48}"]
 
@@ -32,6 +32,19 @@ class Pages(unittest.TestCase):
             self.assertIn('id="site-menu"', text, name)
             self.assertIn('src="/menu.js"', text, name)
 
+    def test_admin_pages_are_marked_and_customer_pages_are_not(self):
+        admin_pages = ["index.html", "setup.html", "settings.html", "admin-guide.html", "admin-sanity.html"]
+        customer_pages = ["landing.html", "start.html", "pricing.html", "account.html"]
+        for name in admin_pages:
+            self.assertIn('data-area="admin"', (DOCS / name).read_text(), name)
+        for name in customer_pages:
+            self.assertNotIn('data-area="admin"', (DOCS / name).read_text(), name)
+
+    def test_customer_menu_has_no_admin_links(self):
+        customer = re.search(r"var CUSTOMER = \[(.*?)\];", (DOCS / "menu.js").read_text(), re.S).group(1)
+        for admin_only in ["/admin", "/settings", "/api/docs", "/healthz"]:
+            self.assertNotIn(f'"{admin_only}"', customer, admin_only)
+
     def test_every_internal_menu_link_is_a_route(self):
         known = routes() | {"/", "/landing", "/api/docs"}   # /api/docs is FastAPI's built-in docs_url
         for link in menu_links():
@@ -41,7 +54,8 @@ class Pages(unittest.TestCase):
 
     def test_every_page_has_a_route(self):
         known = routes()
-        for route in ["/landing", "/start", "/pricing", "/setup", "/settings", "/account", "/menu.js"]:
+        for route in ["/", "/start", "/pricing", "/account", "/admin", "/admin/setup", "/admin/settings",
+                      "/admin/guide", "/admin/sanity", "/admin/login", "/admin/callback", "/admin/logout", "/menu.js"]:
             self.assertIn(route, known, route)
 
     def test_no_secret_values_in_public_pages(self):

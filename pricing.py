@@ -26,7 +26,10 @@ RATES = {
     "fly_per_s": (0.00000256, "Fly.io shared-cpu-2x 1GB, per second"),
     # Azure Blob Storage, Standard LRS hot, UK South, GBP per GB per month. Undated third-party figure.
     "blob_gbp_per_gb_month": (0.0142, "Azure Blob Storage, UK South, GBP per GB per month (undated)"),
+    # DeepInfra image generation (FLUX-1-schnell), per megapixel. The storyboard image is 1024x576 (0.59 MP).
+    "image_per_mp": (0.0005, "DeepInfra FLUX-1-schnell, per megapixel (DeepInfra listing; third-party trackers agree)"),
 }
+STORYBOARD_MP = 1024 * 576 / 1_000_000
 
 # How much each run uses. These are estimates. The quote shows them so they can be checked.
 TOKENS_PER_PANEL_IMAGE = 1500      # a 640 px JPEG in a vision model
@@ -70,6 +73,7 @@ def estimate(duration_s: float, transcript_chars: int | None = None, shots: int 
         "text_out_tokens": round(text_tokens * 1.1),                # the clean script is about the same length
         "cpu_seconds": round(CPU_OVERHEAD_S + duration_s * CPU_SECONDS_PER_VIDEO_SECOND),
         "stored_gb": round((frame_mb + video_mb + 0.5) / 1024, 6),   # outputs plus the 480p video, plus ~0.5 MB text
+        "storyboard_images": 1 if storyboard else 0,
     }
 
 
@@ -88,6 +92,10 @@ def quote(usage: dict) -> dict:
               f"{usage['stored_gb'] * 1024:.1f} MB kept in Azure for {RETAIN_MONTHS} month, "
               f"converted at {FX_GBP_USD} USD per GBP. The video and frames stay with us, not with the customer", short="Storage"),
     ]
+    if usage.get("storyboard_images"):
+        n = usage["storyboard_images"]
+        lines.append(_line("AI storyboard image", n * STORYBOARD_MP * _rate("image_per_mp"),
+                           f"{n} image of 1024 x 576 pixels from DeepInfra", short="Storyboard image"))
     cost = sum(l["amount"] for l in lines)
     margin = cost * MARGIN
     before_fees = cost + margin

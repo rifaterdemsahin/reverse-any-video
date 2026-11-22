@@ -6,7 +6,7 @@ Give it a YouTube URL or a local video file. It measures what can be measured
 and writes:
 
   out/<id>/analysis.json   every number the report uses
-  out/<id>/script.md       the transcript with timestamps and section breaks
+  out/<id>/transcript_script.md  the transcript with timestamps (internal, quotes the source)
   out/<id>/SKILL.md        a style blueprint you can hand to Claude as a skill
   out/<id>/report.html     a self-contained visual report
 
@@ -35,6 +35,7 @@ from collections import Counter
 from pathlib import Path
 
 import deepinfra
+import handbook
 import reverse_llm
 import template
 
@@ -620,6 +621,13 @@ def run(source: str | None, out_root: Path | str = "out", transcript_text: str |
         written += template.write(out, metrics, [{"start": s["start"], "end": s["end"]} for s in sec],
                                   video.get("shots"), video.get("fps"))
 
+    # The customer's README.md and AGENTS.md: how to use the other files. No words from the video.
+    placeholders = []
+    tpl = out / "hyperframes_template.json"
+    if tpl.exists():
+        placeholders = json.loads(tpl.read_text()).get("placeholders", [])
+    written += handbook.write(out, job_id or vid or "job", source if is_url else None, placeholders)
+
     llm = None
     key = deepinfra.api_key()
     if key and (segs or video_path):
@@ -630,7 +638,7 @@ def run(source: str | None, out_root: Path | str = "out", transcript_text: str |
     analysis = {"meta": meta, "transcript_format": fmt, "script": script, "llm": llm,
                 "video": {k: v for k, v in video.items() if k != "frames"}, "segments": segs}
     (out / "analysis.json").write_text(json.dumps(analysis, indent=2, ensure_ascii=False))
-    (out / "script.md").write_text(script_md(meta, segs, script))
+    (out / "transcript_script.md").write_text(script_md(meta, segs, script))   # internal: quotes the transcript
     (out / "SKILL.md").write_text(blueprint_md(meta, script, video))
     (out / "report.html").write_text(report_html(meta, script, video, segs))
     return {"out_dir": str(out), "analysis": analysis, "frames": video.get("frames", []),
@@ -653,7 +661,7 @@ def main(argv: list[str] | None = None) -> int:
     transcript = Path(a.transcript).read_text(encoding="utf-8", errors="replace") if a.transcript else None
     r = run(a.source, a.out, transcript, a.video, a.download, a.cookies, a.scene_threshold,
             not a.no_frames, a.max_duration)
-    print(f"wrote {r['out_dir']}/analysis.json, script.md, SKILL.md, report.html")
+    print(f"wrote {r['out_dir']}/analysis.json, transcript_script.md, SKILL.md, report.html")
     if not r["has_transcript"] and not r["has_video"]:
         print("No transcript or video was available, so only metadata was saved. "
               "Pass --transcript FILE and/or --video FILE.", file=sys.stderr)

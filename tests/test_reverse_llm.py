@@ -2,6 +2,7 @@
 
 No network and no API key needed. The video is generated with ffmpeg, which the other video tests also need.
 """
+import json
 import os
 import shutil
 import subprocess
@@ -70,11 +71,20 @@ class Pipeline(unittest.TestCase):
         shutil.rmtree(self.td, ignore_errors=True)
 
     def stub(self, answer_fn):
+        """Replaces di.chat. Calls record() the same way the real client does, so the trace is exercised."""
         calls = []
 
-        def fake(messages, model, key, max_tokens=3000, timeout=180):
+        def fake(messages, model, key, max_tokens=3000, timeout=180, record=None):
             calls.append(model)
-            return answer_fn(messages, model)
+            try:
+                answer = answer_fn(messages, model)
+            except di.DeepInfraError as e:
+                if record:
+                    record({"model": model, "prompt": di.text_only(messages), "error": str(e)})
+                raise
+            if record:
+                record({"model": model, "prompt": di.text_only(messages), "response": answer})
+            return answer
         di.chat = fake
         return calls
 
@@ -122,6 +132,29 @@ class Pipeline(unittest.TestCase):
         self.assertTrue((self.out / "edit_decision_list.edl").exists())   # the EDL needs no model
         self.assertTrue((self.out / "frames.zip").exists())
         self.assertFalse((self.out / "storyboard.md").exists())
+
+    def test_trace_records_every_prompt_and_reply_without_image_data(self):
+        def answer(messages, model):
+            if model == di.VISION_MODEL:
+                return '[{"shot": 1, "description": "A lake", "camera": "wide", "on_screen_text": "", "purpose": "hook", "clip_name": "Lake"}]'
+            return "unused"
+        self.stub(answer)
+        rl.build(self.out, "Demo", None, self.video, self.info, self.segs, "key", None)
+        trace = json.loads((self.out / "llm_trace.json").read_text())
+        self.assertGreaterEqual(len(trace), 1)
+        call = trace[0]
+        self.assertEqual(call["model"], di.VISION_MODEL)
+        self.assertIn("response", call)
+        self.assertNotIn("base64", json.dumps(call))            # image bytes never reach the saved trace
+        self.assertIn("[image]", json.dumps(call["prompt"]))
+
+    def test_trace_records_a_failed_call_with_its_error(self):
+        def boom(messages, model):
+            raise di.DeepInfraError("DeepInfra HTTP 503 for x: busy")
+        self.stub(boom)
+        rl.build(self.out, "Demo", None, self.video, self.info, self.segs, "key", None)
+        trace = json.loads((self.out / "llm_trace.json").read_text())
+        self.assertTrue(any("error" in e for e in trace))
 
     def test_transcript_only_skips_video_outputs(self):
         self.stub(lambda m, model: "## Script\n[00:00] Hello")

@@ -32,7 +32,7 @@ class Quote(unittest.TestCase):
 
     def test_every_line_has_a_detail_and_every_rate_a_source(self):
         q = p.quote(p.estimate(120))
-        self.assertEqual(len(q["lines"]), 4)
+        self.assertEqual(len(q["lines"]), 5)   # four cost lines and the storyboard image
         self.assertTrue(all(line["detail"] for line in q["lines"]))
         self.assertTrue(all(r["source"] for r in q["rates"].values()))
 

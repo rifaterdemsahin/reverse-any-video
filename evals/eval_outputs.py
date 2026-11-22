@@ -21,7 +21,8 @@ import template  # noqa: E402
 
 ANALYSIS = ROOT / "examples" / "KnqTiAXUH7M" / "analysis.json"
 DELIVERABLES = {"storyboard.md", "edit_decision_list.edl", "metrics.json",
-                "hyperframes_prompt.md", "hyperframes_template.json"}
+                "hyperframes_prompt.md", "hyperframes_template.json", "README.md", "AGENTS.md",
+                "script.md", "prompter.md", "storyboard.png"}
 NGRAM = 6   # a run of this many words from the transcript in an output is a leak
 
 
@@ -61,6 +62,8 @@ class Fixture:
         panels = "\n".join(f"## Shot {i:03d}\n- On screen: a close-up of an object\n- Speech in shot: yes"
                            for i in range(1, min(len(shots), 3) + 1))
         (out / "storyboard.md").write_text("# Storyboard\n\n" + panels + "\n")
+        import handbook
+        handbook.write(out, "eval", None, [])
         return out, a, metrics
 
 
@@ -77,7 +80,8 @@ class OutputRules(unittest.TestCase):
         self.assertNotIn("script_clean.md", names)
 
     def test_no_transcript_run_of_six_words_in_any_text_output(self):
-        for name in ["storyboard.md", "edit_decision_list.edl", "hyperframes_prompt.md", "hyperframes_template.json"]:
+        for name in ["storyboard.md", "edit_decision_list.edl", "hyperframes_prompt.md", "hyperframes_template.json",
+                     "README.md", "AGENTS.md", "script.md", "prompter.md"]:
             text = (self.out / name).read_text()
             self.assertEqual(leaks(text, self.grams), [], f"{name} repeats transcript wording")
 

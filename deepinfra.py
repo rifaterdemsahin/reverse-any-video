@@ -14,6 +14,7 @@ import base64
 import json
 import os
 import re
+import time
 import urllib.error
 import urllib.request
 
@@ -35,7 +36,24 @@ def image_part(jpg: bytes) -> dict:
             "image_url": {"url": "data:image/jpeg;base64," + base64.b64encode(jpg).decode()}}
 
 
-def chat(messages: list[dict], model: str, key: str, max_tokens: int = 3000, timeout: int = 180) -> str:
+def text_only(messages: list[dict]) -> list[dict]:
+    """The prompt without image data: images become a short marker. Used for the saved trace."""
+    out = []
+    for m in messages:
+        content = m.get("content")
+        if isinstance(content, list):
+            parts = []
+            for part in content:
+                if part.get("type") == "text":
+                    parts.append(part.get("text", ""))
+                elif part.get("type") == "image_url":
+                    parts.append("[image]")
+            content = "\n".join(parts)
+        out.append({"role": m.get("role", ""), "content": content})
+    return out
+
+
+def _request(messages: list[dict], model: str, key: str, max_tokens: int, timeout: int) -> str:
     body = json.dumps({"model": model, "messages": messages, "max_tokens": max_tokens,
                        "temperature": 0.2}).encode()
     req = urllib.request.Request(f"{BASE_URL}/chat/completions", data=body, method="POST",
@@ -52,6 +70,21 @@ def chat(messages: list[dict], model: str, key: str, max_tokens: int = 3000, tim
         return data["choices"][0]["message"]["content"] or ""
     except (KeyError, IndexError, TypeError):
         raise DeepInfraError(f"DeepInfra returned no message for {model}") from None
+
+
+def chat(messages: list[dict], model: str, key: str, max_tokens: int = 3000, timeout: int = 180,
+         record=None) -> str:
+    """One chat call. If `record` is given, it gets one entry per call: the prompt (no image data),
+    and the reply or the error."""
+    try:
+        answer = _request(messages, model, key, max_tokens, timeout)
+    except DeepInfraError as e:
+        if record:
+            record({"at": time.time(), "model": model, "prompt": text_only(messages), "error": str(e)})
+        raise
+    if record:
+        record({"at": time.time(), "model": model, "prompt": text_only(messages), "response": answer})
+    return answer
 
 
 def parse_json(text: str):

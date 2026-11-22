@@ -32,6 +32,17 @@ Not delivered, ever: the source video, its frames, its transcript, or any senten
 7. **Do not bypass a permission denial.** If a command is blocked, stop, say what was blocked and why, and let the
    owner decide.
 
+## Output contract (machine-readable)
+
+`schemas/output-contract.json` is the source of truth for what a job delivers. Read it before changing any output.
+- `files[]`: each deliverable, its format, the inputs that produce it (`link`, `upload`, AI key), and what it holds.
+- `$defs.metrics` and `$defs.template`: JSON Schemas. `metrics.json` and `hyperframes_template.json` must match them.
+- `availability`: a link gives metrics, prompt and template. An upload gives all five.
+- `never_delivered`: the source video, frames, transcript and any source words. Evals in `evals/` enforce this.
+
+If you add or rename an output, update `schemas/output-contract.json`, the `OUTPUT_FILES` set in `server.py`, the
+README table, and the page text in `docs/app.html`, then run the evals.
+
 ## Where things are
 
 | Path | What it is |

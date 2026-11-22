@@ -17,3 +17,5 @@ sprites-py>=0.7.2              # Fly.io Sprites: remote HyperFrames renders
 azure-storage-blob>=12.19,<13
 azure-keyvault-secrets>=4.8,<5
 azure-identity>=1.15,<2
+
+Pillow>=10.1,<12                # the storyboard image, when DeepInfra image generation is not used

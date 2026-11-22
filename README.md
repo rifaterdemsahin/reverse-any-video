@@ -42,6 +42,22 @@ transcript are never part of the output.
 Pages: `/landing` (overview), `/start` (price), `/pricing` (cost breakdown), `/setup` (install guide),
 `/settings` (access token and every setting), `/` (analyzer).
 
+## Output contract (what a customer gets)
+
+The machine-readable version is [`schemas/output-contract.json`](schemas/output-contract.json): file names, which
+inputs produce each file, and the JSON schemas for `metrics.json` and `hyperframes_template.json`.
+
+| File | Format | Needs | What it holds |
+|---|---|---|---|
+| `metrics.json` | JSON | link or upload | length, words, pace, questions, hook timing, sections, CTAs, shots, cut rate, shot length (numbers only) |
+| `hyperframes_prompt.md` | Markdown | link or upload | style and pacing, one prompt for the whole video, a prompt per scene, placeholder list |
+| `hyperframes_template.json` | JSON | link or upload | scene plan (`title`, `logline`, `scenes`, `timeline`, `style`, `placeholders`) with `{{placeholders}}` |
+| `edit_decision_list.edl` | CMX 3600 EDL | upload | one event per shot on track V, timecodes HH:MM:SS:FF, clip names |
+| `storyboard.md` | Markdown | upload and the AI key | one section per sampled shot: on screen, camera, text on screen, speech yes or no, purpose |
+
+A link gives the first three. An upload gives all five. The customer gets them as one zip, `reverse-any-video-<job_id>.zip`.
+**Never included:** the source video, its frames, its transcript, or any words from the source.
+
 ## What it measures
 
 | From the transcript | From the video file (ffmpeg) |

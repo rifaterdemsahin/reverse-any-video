@@ -56,11 +56,12 @@ from pathlib import Path
 from urllib.parse import urlparse
 
 from fastapi import FastAPI, File, Form, Header, HTTPException, Request, UploadFile
-from fastapi.responses import FileResponse, JSONResponse, RedirectResponse, Response
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse, Response
 
 import create_video as cv
 import reverse_video as rv
 import accounts
+import admin
 import deepinfra
 import gmail
 import payments
@@ -80,7 +81,9 @@ ACCESS_TOKEN = os.environ.get("ACCESS_TOKEN") or None
 # What a job delivers. Numbers, structure and a template only: no transcript, no frames, no video.
 OUTPUT_FILES = {"storyboard.md": "text/markdown", "edit_decision_list.edl": "text/plain",
                 "metrics.json": "application/json", "hyperframes_prompt.md": "text/markdown",
-                "hyperframes_template.json": "application/json"}
+                "hyperframes_template.json": "application/json", "script.md": "text/markdown",
+                "prompter.md": "text/markdown", "storyboard.png": "image/png",
+                "README.md": "text/markdown", "AGENTS.md": "text/markdown"}
 LOGO_TYPES = {".png", ".jpg", ".jpeg", ".svg", ".webp"}
 QUALITIES = {"draft", "looks", "delivery", "standard", "high"}
 
@@ -164,6 +167,24 @@ def _cleanup():
             shutil.rmtree(jobs.pop(k)["dir"], ignore_errors=True)
 
 
+def _save_job_records(job: dict, out: Path | None):
+    """Progress and the LLM trace (every prompt sent and every reply) go to Azure under internal/<job_id>/.
+    Operator only, never part of a customer's bundle."""
+    if not storage.configured():
+        return
+    try:
+        s = get_store()
+        s.put_json(f"internal/{job['id']}/progress.json", {
+            "job_id": job["id"], "status": job.get("status"), "project": job.get("project"),
+            "created": job.get("created"), "started": job.get("started"), "finished": job.get("finished"),
+            "error": job.get("error"), "log": job.get("log", [])})
+        trace = Path(out) / "llm_trace.json" if out else None
+        if trace and trace.exists():
+            s.put_json(f"internal/{job['id']}/llm_trace.json", json.loads(trace.read_text()))
+    except Exception as e:  # noqa: BLE001 - records are best effort, the job result still stands
+        job["log"].append(f"job records not saved: {type(e).__name__}")
+
+
 def _work(job_id: str, source: str | None, transcript: str | None, video: Path | None, download: bool,
           title: str | None, project: str | None = None):
     job = jobs[job_id]
@@ -172,6 +193,7 @@ def _work(job_id: str, source: str | None, transcript: str | None, video: Path |
         result = rv.run(source, DATA, transcript, video, download, COOKIES, max_duration=MAX_DURATION,
                         job_id=job_id, log=lambda m: job["log"].append(m), title=title)
         out = Path(result["out_dir"])
+        _save_job_records(job, out)              # before cleanup removes llm_trace.json
         # Working files (source video, frames) go to Azure for the operator. Customers never get them.
         if storage.configured():
             try:
@@ -194,6 +216,7 @@ def _work(job_id: str, source: str | None, transcript: str | None, video: Path |
         job.update(status="error", error=f"{type(e).__name__}: {e}")
     finally:
         job["finished"] = time.time()
+        _save_job_records(job, Path(job["dir"]))  # final status, also after an error
         if video:
             video.unlink(missing_ok=True)
 
@@ -413,7 +436,7 @@ def get_project(slug: str, x_access_token: str | None = Header(None)):
 
 @app.get("/")
 def index():
-    return FileResponse(DOCS / "index.html", media_type="text/html")
+    return FileResponse(DOCS / "landing.html", media_type="text/html")
 
 
 @app.get("/api/quote")
@@ -540,7 +563,134 @@ def account_page():
 
 @app.get("/settings")
 def settings_page():
-    return FileResponse(DOCS / "settings.html", media_type="text/html")
+    return RedirectResponse("/admin/settings", status_code=308)
+
+
+# --------------------------------------------------------------------------- #
+# Admin area: the analyzer and operator pages, for one Azure account only      #
+# --------------------------------------------------------------------------- #
+
+def _admin_page(request: Request, name: str):
+    if admin.email_from_session(request.cookies.get(admin.ADMIN_COOKIE)):
+        return FileResponse(DOCS / name, media_type="text/html")
+    if not admin.configured():
+        return HTMLResponse("Admin sign-in is not set up yet on this server.", status_code=503)
+    return RedirectResponse("/admin/login", status_code=303)
+
+
+@app.get("/admin")
+def admin_analyzer(request: Request):
+    return _admin_page(request, "index.html")
+
+
+@app.get("/admin/guide")
+def admin_guide(request: Request):
+    return _admin_page(request, "admin-guide.html")
+
+
+@app.get("/admin/api/sanity")
+def admin_sanity(request: Request):
+    """Each check runs for real. The page at /admin/sanity shows the results. Admin only."""
+    if not admin.email_from_session(request.cookies.get(admin.ADMIN_COOKIE)):
+        raise HTTPException(401, "Sign in as the admin first.")
+    checks = []
+
+    def check(name: str, fn, fix: str):
+        try:
+            ok, detail = fn()
+        except Exception as e:  # noqa: BLE001 - a failing check is a result, not a crash
+            ok, detail = False, f"{type(e).__name__}: {e}"
+        checks.append({"name": name, "ok": bool(ok), "detail": detail, "fix": "" if ok else fix})
+
+    check("Server is running and imports every module",
+          lambda: (True, f"{len(OUTPUT_FILES)} output files defined"), "Check fly logs for an import error.")
+    check("Access token is set (auth required)",
+          lambda: (ACCESS_TOKEN is not None, "set" if ACCESS_TOKEN else "not set"),
+          "fly secrets set --app reverse-any-video ACCESS_TOKEN=<token>")
+    check("Azure storage reachable (projects and internal files)",
+          lambda: (get_store() is not None, "container reachable"),
+          "Set AZURE_KEYVAULT_URL and the service principal secrets, then fly deploy.")
+    check("DeepInfra key set (storyboard and EDL clip names)",
+          lambda: (deepinfra.api_key() is not None, "set" if deepinfra.api_key() else "not set"),
+          "fly secrets set --stage DEEPINFRA_API_KEY=<key>, then fly deploy.")
+    check("Sign-in email (Gmail) configured",
+          lambda: (gmail.configured(), "configured" if gmail.configured() else "missing"),
+          "Put GMAIL-OAUTH-CLIENT-ID, GMAIL-OAUTH-CLIENT-SECRET and GMAIL-OAUTH-REFRESH-TOKEN in Key Vault.")
+    check("Session secret set (customer and admin sessions)",
+          lambda: (accounts._secret() is not None, "set"),
+          "fly secrets set --stage SESSION_SECRET=$(openssl rand -hex 32), then fly deploy.")
+    check("Admin sign-in configured",
+          lambda: (admin.configured(), "configured" if admin.configured() else "missing"),
+          "Create the admin app and its secret (see the admin guide, step 9).")
+    check("Stripe test key set",
+          lambda: (payments.configured(), "set" if payments.configured() else "not set"),
+          "fly secrets set --stage STRIPE_SECRET_KEY=sk_test_...")
+    check("Stripe webhook secret set",
+          lambda: (payments.webhook_secret() is not None, "set" if payments.webhook_secret() else "not set"),
+          "fly secrets set --stage STRIPE_WEBHOOK_SECRET=whsec_...")
+    check("Pricing: quote and packs for a 5-minute video",
+          lambda: (_pricing_ok(), "price positive, three packs"),
+          "Check pricing.py and the PACKAGE_AMOUNTS list.")
+    check("Customer bundle includes README.md and AGENTS.md",
+          lambda: ("README.md" in OUTPUT_FILES and "AGENTS.md" in OUTPUT_FILES, "both listed"),
+          "Add them to OUTPUT_FILES in server.py.")
+    check("No internal file is in the customer bundle",
+          lambda: (not ({"frames.zip", "analysis.json", "video.mp4", "llm_trace.json", "progress.json"} & set(OUTPUT_FILES)),
+                   "none listed"),
+          "Remove the internal file from OUTPUT_FILES.")
+    return {"ok": all(c["ok"] for c in checks), "checks": checks}
+
+
+def _pricing_ok() -> bool:
+    q = pricing.quote(pricing.estimate(300))
+    packs = pricing.package_estimates(300)
+    return q["price"] > 0 and len(packs) == 3
+
+
+@app.get("/admin/sanity")
+def admin_sanity_page(request: Request):
+    return _admin_page(request, "admin-sanity.html")
+
+
+@app.get("/admin/setup")
+def admin_setup(request: Request):
+    return _admin_page(request, "setup.html")
+
+
+@app.get("/admin/settings")
+def admin_settings(request: Request):
+    return _admin_page(request, "settings.html")
+
+
+@app.get("/admin/login")
+def admin_login():
+    if not admin.configured():
+        return HTMLResponse("Admin sign-in is not set up yet on this server.", status_code=503)
+    state, nonce = admin.new_state()
+    return RedirectResponse(admin.authorize_url(f"{PUBLIC_URL}/admin/callback", state, nonce), status_code=303)
+
+
+@app.get("/admin/callback")
+def admin_callback(code: str = "", state: str = "", error: str = ""):
+    if error:
+        return HTMLResponse("Sign-in was cancelled or refused.", status_code=403)
+    try:
+        nonce = admin.check_state(state)
+        claims = admin.exchange_code(code, f"{PUBLIC_URL}/admin/callback")
+        email = admin.admin_email(claims, nonce)
+    except admin.AdminError as e:
+        return HTMLResponse(f"Not allowed: {e}", status_code=403)
+    resp = RedirectResponse("/admin", status_code=303)
+    resp.set_cookie(admin.ADMIN_COOKIE, admin.session_value(email), max_age=admin.SESSION_TTL,
+                    httponly=True, secure=True, samesite="lax")
+    return resp
+
+
+@app.get("/admin/logout")
+def admin_logout():
+    resp = RedirectResponse("/", status_code=303)
+    resp.delete_cookie(admin.ADMIN_COOKIE)
+    return resp
 
 
 @app.get("/menu.js")
@@ -550,7 +700,7 @@ def menu_js():
 
 @app.get("/landing")
 def landing():
-    return FileResponse(DOCS / "landing.html", media_type="text/html")
+    return RedirectResponse("/", status_code=308)
 
 
 @app.get("/pricing")
@@ -560,7 +710,7 @@ def pricing_page():
 
 @app.get("/setup")
 def setup_guide():
-    return FileResponse(DOCS / "setup.html", media_type="text/html")
+    return RedirectResponse("/admin/setup", status_code=308)
 
 
 @app.get("/thumbnail.jpg")

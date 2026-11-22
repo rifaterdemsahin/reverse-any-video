@@ -118,10 +118,64 @@ def prompt_md(template: dict) -> str:
     return "\n".join(lines)
 
 
+def script_md(template: dict) -> str:
+    """The script for the customer to write: one block per scene, with the time and the word target.
+    The narration is a placeholder. Nothing here comes from the analysed video."""
+    st, tl = template["style"], template["timeline"]
+    lines = [
+        "# Script",
+        "",
+        f"Length about {st.get('duration_s') or sum(t['duration_s'] for t in tl):.0f} seconds, "
+        f"in {len(tl)} scenes, at about {st['wpm']} words per minute.",
+        "Write your own words for each scene. Keep to the target, so the timing still fits.",
+        "",
+    ]
+    for t in tl:
+        i = t["scene"]
+        lines += [
+            f"## Scene {i}: {t['role']} · {t['start_s']:.1f} s to {t['start_s'] + t['duration_s']:.1f} s",
+            "",
+            f"Target: about {t['target_words']} words.",
+            "",
+            f"On screen: {{{{headline_{i}}}}}",
+            "",
+            f"{{{{narration_{i}}}}}",
+            "",
+        ]
+    return "\n".join(lines)
+
+
+def prompter_md(template: dict) -> str:
+    """The same script set out for a teleprompter: large blocks, short lines, pauses marked."""
+    st, tl = template["style"], template["timeline"]
+    lines = [
+        "# Prompter",
+        "",
+        f"Read at about {st['wpm']} words per minute. One block per scene. [pause] is a half-second beat.",
+        "",
+    ]
+    for t in tl:
+        i = t["scene"]
+        lines += [
+            f"---",
+            f"## {i} · {t['role']} · {t['duration_s']:.0f} s",
+            "",
+            f"{{{{narration_{i}}}}}",
+            "",
+            "[pause]",
+            "",
+        ]
+    return "\n".join(lines)
+
+
 def write(out_dir, metrics: dict, sections: list[dict], shots: int | None, fps: float | None) -> list[str]:
     from pathlib import Path
     out_dir = Path(out_dir)
     t = build(metrics, sections, shots, fps)
     (out_dir / "hyperframes_template.json").write_text(json.dumps(t, indent=2))
     (out_dir / "hyperframes_prompt.md").write_text(prompt_md(t))
-    return ["hyperframes_template.json", "hyperframes_prompt.md"]
+    (out_dir / "script.md").write_text(script_md(t))
+    (out_dir / "prompter.md").write_text(prompter_md(t))
+    import storyboard_png
+    storyboard_png.draw(t, out_dir / "storyboard.png")
+    return ["hyperframes_template.json", "hyperframes_prompt.md", "script.md", "prompter.md", "storyboard.png"]

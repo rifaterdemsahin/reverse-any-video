@@ -14,6 +14,7 @@ Environment:
 """
 from __future__ import annotations
 
+import json
 import os
 import re
 import shutil
@@ -119,7 +120,7 @@ def extract_frames(video: Path, shots: list[dict], out_dir: Path, fps: float) ->
 # --------------------------------------------------------------------------- #
 
 def describe_storyboard(shots: list[dict], frames: list[bytes | None], segs: list[dict], key: str,
-                        log=None) -> dict[int, dict]:
+                        log=None, record=None) -> dict[int, dict]:
     """Ask the vision model about each sampled shot. Returns {shot_number: description}."""
     log = log or (lambda m: None)
     found: dict[int, dict] = {}
@@ -133,7 +134,8 @@ def describe_storyboard(shots: list[dict], frames: list[bytes | None], segs: lis
                                                     f"Words spoken: {spoken}"})
             content.append(di.image_part(jpg))
         log(f"storyboard: shots {batch[0][0]}-{batch[-1][0]} to {di.VISION_MODEL}")
-        answer = di.parse_json(di.chat([{"role": "user", "content": content}], di.VISION_MODEL, key, max_tokens=3000))
+        answer = di.parse_json(di.chat([{"role": "user", "content": content}], di.VISION_MODEL, key,
+                                                      max_tokens=3000, record=record))
         for item in answer if isinstance(answer, list) else []:
             try:
                 found[int(item["shot"])] = item
@@ -182,6 +184,7 @@ def build(out_dir: Path, title: str, source: str | None, video_path: Path | None
           segs: list[dict], key: str, log=None) -> dict:
     """Write the LLM outputs into out_dir. Returns a summary for analysis.json."""
     log = log or (lambda m: None)
+    trace: list[dict] = []          # every prompt sent to a model and every reply, for the operator
     summary: dict = {"enabled": True, "vision_model": di.VISION_MODEL, "text_model": di.TEXT_MODEL,
                      "files": [], "errors": []}
     fps = video_info.get("fps") or 25
@@ -212,7 +215,7 @@ def build(out_dir: Path, title: str, source: str | None, video_path: Path | None
             picked = sample_indices(len(shots), STORYBOARD_SHOTS)
             sample = [shots[i] for i in picked]
             jpgs = [paths[i].read_bytes() if paths[i] else None for i in picked]
-            got = step("storyboard", lambda: describe_storyboard(sample, jpgs, segs, key, log))
+            got = step("storyboard", lambda: describe_storyboard(sample, jpgs, segs, key, log, trace.append))
             for n, item in (got or {}).items():
                 if 1 <= n <= len(picked):
                     panels[picked[n - 1] + 1] = item
@@ -229,5 +232,7 @@ def build(out_dir: Path, title: str, source: str | None, video_path: Path | None
         summary["files"].append("edit_decision_list.edl")
         summary["edl_events"] = len(shots)
 
+    (out_dir / "llm_trace.json").write_text(json.dumps(trace, indent=2, ensure_ascii=False))
+    summary["trace_entries"] = len(trace)
     summary["ok"] = not summary["errors"]
     return summary

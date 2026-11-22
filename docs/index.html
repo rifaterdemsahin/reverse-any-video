@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
 </head>
-<body>
+<body data-area="admin">
 <title>Reverse Any Video</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -177,7 +177,7 @@ details summary { cursor: pointer; font-weight: 600; font-size: 14px; margin-bot
   <header>
     <div>
       <p class="word"><b class="hl">/reverse-any-video</b></p>
-      <p class="lede">Paste a video's transcript and, if you have it, drop in the video file. You get its hook, structure, pacing, cut rhythm and retention devices measured on a timeline, plus a <code>SKILL.md</code> blueprint for making something in the same style. Everything runs in your browser.</p>
+      <p class="lede">Paste a video link, or upload a video you have the right to analyse. You get the measured structure and pacing, and a HyperFrames template to make your own video in the same style.</p>
     </div>
     <span class="rec"><i></i>nothing is uploaded</span>
   </header>
@@ -206,9 +206,9 @@ details summary { cursor: pointer; font-weight: 600; font-size: 14px; margin-bot
   </section>
 
   <section aria-labelledby="in-title">
-    <div class="section-head"><h2 id="in-title">Input</h2><span id="demo-flag" class="example">Demo script, written for this page. Not from the base video.</span></div>
+    <div class="section-head"><h2 id="in-title">Input: video link</h2><span id="demo-flag" class="example" hidden>Demo script, written for this page. Not from the base video.</span></div>
     <div class="input">
-      <div class="field">
+      <div class="field" hidden>
         <label class="label" for="transcript">Transcript: YouTube copy, VTT, SRT, json3 or plain text</label>
         <textarea id="transcript" spellcheck="false"></textarea>
       </div>
@@ -232,6 +232,8 @@ details summary { cursor: pointer; font-weight: 600; font-size: 14px; margin-bot
               <li><code>metrics.json</code>: length, pace, cut rate, shot length and hook timing, as numbers.</li>
               <li><code>hyperframes_prompt.md</code>: the style, the pacing and a prompt for each scene.</li>
               <li><code>hyperframes_template.json</code>: the scene plan with placeholders for your own text.</li>
+              <li><code>README.md</code>: how to use the files, step by step.</li>
+              <li><code>AGENTS.md</code>: instructions for an AI agent to fill the template and build the video.</li>
             </ul>
             <p style="margin:4px 0 0">A link gives the metrics, the HyperFrames prompt and the template. An upload gives all five. Not included: the source video, its frames and its transcript.</p></div>
           <button id="srv-run" type="button">Fetch and analyze URL</button>
@@ -248,7 +250,7 @@ details summary { cursor: pointer; font-weight: 600; font-size: 14px; margin-bot
     </div>
   </section>
 
-  <section id="results" aria-labelledby="res-title" style="display:grid;gap:24px">
+  <section id="results" aria-labelledby="res-title" style="display:grid;gap:24px" hidden>
     <div class="section-head" style="margin:0"><h2 id="res-title">Readout: <span id="res-name"></span></h2><span id="res-src" class="label"></span></div>
     <div class="tiles" id="tiles"></div>
 
@@ -327,10 +329,7 @@ details summary { cursor: pointer; font-weight: 600; font-size: 14px; margin-bot
   </section>
 
   <footer>
-    <h3>Run it on any URL</h3>
-    <p>The command-line version fetches captions and the video itself, finds cuts with ffmpeg, and writes <code>analysis.json</code>, <code>script.md</code>, <code>SKILL.md</code> and <code>report.html</code>:</p>
-    <pre>python reverse_video.py "https://www.youtube.com/watch?v=KnqTiAXUH7M" --download</pre>
-    <p>Source and the Claude Code skill: <a href="https://github.com/rifaterdemsahin/reverse-any-video" target="_blank" rel="noopener">github.com/rifaterdemsahin/reverse-any-video</a></p>
+    <p class="muted">Admin area. <a href="/admin/guide">Admin guide</a> · <a href="/admin/sanity">Sanity check</a></p>
   </footer>
 </div>
 
@@ -661,7 +660,7 @@ const fromServer = (r) => {
 };
 (async () => {
   try {
-    const r = await fetch("api/health", { cache: "no-store" });
+    const r = await fetch("/api/health", { cache: "no-store" });
     if (!r.ok) return;
     const h = await r.json();
     if (h.service !== "reverse-any-video") return;
@@ -679,13 +678,13 @@ $("srv-run").addEventListener("click", async () => {
   const headers = $("srv-token").value ? { "X-Access-Token": $("srv-token").value.trim() } : {};
   $("srv-run").disabled = true; $("srv-files").innerHTML = ""; $("bar").style.width = "10%";
   try {
-    const res = await fetch("api/jobs", { method: "POST", body: fd, headers });
+    const res = await fetch("/api/jobs", { method: "POST", body: fd, headers });
     const created = await res.json();
     if (!res.ok) throw new Error(created.error || `Server answered ${res.status}.`);
     let job, n = 0;
     do {
       await sleep(1500); n++;
-      job = await (await fetch(`api/jobs/${created.id}`, { cache: "no-store" })).json();
+      job = await (await fetch(`/api/jobs/${created.id}`, { cache: "no-store" })).json();
       status(`Server: ${job.log[job.log.length - 1] || job.status}…`);
       $("bar").style.width = Math.min(90, 10 + n * 3) + "%";
     } while (job.status === "queued" || job.status === "running");
@@ -694,7 +693,7 @@ $("srv-run").addEventListener("click", async () => {
     $("bar").style.width = "100%";
     ["title", "url"].forEach((id) => store.set("rav:" + id, $(id).value));
     $("demo-flag").hidden = true;
-    $("srv-files").innerHTML = `<p><a class="btn" href="api/jobs/${esc(job.id)}/bundle" download>⬇ Download all (.zip)</a></p>` +
+    $("srv-files").innerHTML = `<p><a class="btn" href="/api/jobs/${esc(job.id)}/bundle" download>⬇ Download all (.zip)</a></p>` +
       Object.entries(job.files).map(([k, u]) => `<a href="${esc(u)}" download>${esc(k)}</a>`).join(" · ");
     status(llm.length ? "Done. Download the zip above." : "Done. Download the zip above. The storyboard is missing because the server has no AI key.");
   } catch (err) { status(err.message, true); $("bar").style.width = "0"; }
@@ -722,7 +721,7 @@ try { $("srv-token").addEventListener("input", (e) => { try { localStorage.setIt
 async function pollJob(id, onTick) {
   for (let n = 0; ; n++) {
     await sleep(n < 5 ? 1500 : 3000);
-    const job = await (await fetch(`api/jobs/${id}`, { cache: "no-store" })).json();
+    const job = await (await fetch(`/api/jobs/${id}`, { cache: "no-store" })).json();
     onTick(job);
     if (job.status === "done") return job;
     if (job.status === "error") throw new Error(job.error);
@@ -828,7 +827,7 @@ $("plan-run").addEventListener("click", async () => {
   fd.append("metrics", JSON.stringify(metrics())); fd.append("touches", JSON.stringify(touches()));
   $("plan-run").disabled = true; createStatus(`Claude is writing the script…`);
   try {
-    const res = await fetch("api/plans", { method: "POST", body: fd, headers: authHeaders() }), created = await res.json();
+    const res = await fetch("/api/plans", { method: "POST", body: fd, headers: authHeaders() }), created = await res.json();
     if (!res.ok) throw new Error(created.error || `Server answered ${res.status}.`);
     const job = await pollJob(created.id, (j) => createStatus(`Claude: ${j.log[j.log.length - 1] || j.status}…`));
     setPlan(job.result.plan); createStatus(`Script ready: ${plan.scenes.length} scenes. Edit anything, then render.`);
@@ -842,7 +841,7 @@ $("render-run").addEventListener("click", async () => {
   if ($("t-logo").files[0]) fd.append("logo", $("t-logo").files[0]);
   $("render-run").disabled = true; $("render-out").innerHTML = ""; createStatus("Rendering…");
   try {
-    const res = await fetch("api/renders", { method: "POST", body: fd, headers: authHeaders() }), created = await res.json();
+    const res = await fetch("/api/renders", { method: "POST", body: fd, headers: authHeaders() }), created = await res.json();
     if (!res.ok) throw new Error(created.error || `Server answered ${res.status}.`);
     const job = await pollJob(created.id, (j) => createStatus(`Render: ${j.log[j.log.length - 1] || j.status}…`));
     const f = job.files || {};
