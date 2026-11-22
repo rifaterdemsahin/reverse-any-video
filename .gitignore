@@ -1,0 +1,7 @@
+out/
+__pycache__/
+*.pyc
+cookies.txt
+*.mp4
+*.webm
+*.mkv

@@ -1,0 +1,4 @@
+# All optional: reverse_video.py runs on the standard library alone.
+yt-dlp>=2025.1.1               # metadata, captions, and --download
+youtube-transcript-api>=1.0.0  # caption fallback
+# ffmpeg/ffprobe (system package) enable shot-cut, silence and keyframe analysis.

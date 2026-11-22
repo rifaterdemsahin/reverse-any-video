@@ -1,0 +1,22 @@
+0:00
+Stop copying editing styles by guessing. In the next eight minutes I'll show you how to measure any video and turn it into a skill.
+0:07
+Here's the problem. You watch a creator you love, you try to edit like them, and it never feels the same.
+0:14
+That's because pacing is numbers, not vibes. Average shot length, words per minute, where the hook ends.
+0:22
+So first, we pull the script. Every timestamp, every word.
+0:29
+Now look at the hook. It lands in under fifteen seconds and makes one specific promise.
+0:41
+Next, we measure the cuts. This video cuts every 2.4 seconds on average, and faster in the middle.
+0:52
+But first, quick one: if this helps, subscribe, it's free and it keeps these coming.
+0:58
+Step three is structure. The script moves through five sections and each one opens with a question.
+1:10
+Why does that matter? Because questions reset attention.
+1:16
+Finally, we write all of it into a SKILL file you can hand to Claude.
+1:24
+The link to the free skill is in the description. Stick around to the end for the template.
