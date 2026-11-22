@@ -120,6 +120,33 @@ def quote(usage: dict) -> dict:
     }
 
 
+# Credit packs: the customer pays once, the card fee is paid once, and each video uses credit equal to its
+# cost plus margin (no per-video card fee). Estimates are how many videos a pack buys at a given length.
+PACKAGE_AMOUNTS = (1.00, 10.00)   # USD
+
+
+def credit_per_video(duration_s: float) -> float:
+    """What one video of this length uses from a pack: the costs shown plus the margin, without the card fee."""
+    q = quote(estimate(duration_s))
+    return round(q["shown"]["costs"] + q["shown"]["margin"], 2)
+
+
+def package_estimates(duration_s: float) -> list[dict]:
+    per = credit_per_video(duration_s)
+    out = []
+    for amount in PACKAGE_AMOUNTS:
+        fee = _cent_up(amount * STRIPE_PERCENT + STRIPE_FIXED)
+        out.append({
+            "pays": amount,
+            "card_fee": fee,
+            "net_to_us": round(amount - fee, 2),
+            "credit_per_video": per,
+            "videos": int(amount // per) if per else 0,
+            "duration_s": round(duration_s, 1),
+        })
+    return out
+
+
 def _line(label: str, amount: float, detail: str, short: str = "") -> dict:
     return {"label": label, "short": short or label, "amount": _money(amount),
             "display": _cent_up(amount), "detail": detail}

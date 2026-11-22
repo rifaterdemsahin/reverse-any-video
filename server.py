@@ -419,7 +419,9 @@ def quote(duration_s: float = 0, transcript_chars: int | None = None, shots: int
     """Public price for one run, with every line item and assumption. No token: it sends nothing and stores nothing."""
     if not 0 < duration_s <= MAX_DURATION:
         raise HTTPException(400, f"duration_s must be between 1 and {MAX_DURATION} seconds.")
-    return pricing.quote(pricing.estimate(duration_s, transcript_chars, shots, storyboard))
+    result = pricing.quote(pricing.estimate(duration_s, transcript_chars, shots, storyboard))
+    result["packages"] = pricing.package_estimates(duration_s)
+    return result
 
 
 @app.get("/start")
