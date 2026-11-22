@@ -19,6 +19,29 @@ video. See [`examples/KnqTiAXUH7M`](examples/KnqTiAXUH7M) for what has been capt
 - **First test video:** https://www.youtube.com/watch?v=KnqTiAXUH7M
 - **First test output:** [`examples/KnqTiAXUH7M`](examples/KnqTiAXUH7M): `script.md`, `SKILL.md`, `analysis.json`, `report.html`
 
+## Quick start
+
+Run the app on your machine, or hand the repo to an AI agent:
+
+```bash
+python3 -m venv .venv && source .venv/bin/activate
+pip install -r requirements-dev.txt
+uvicorn server:app --reload            # open http://localhost:8000
+python -m unittest discover -s tests -v
+```
+
+You need ffmpeg on the path. An optional DeepInfra key adds the storyboard and the EDL when an upload is analysed.
+
+**For an agent:** read [`AGENTS.md`](AGENTS.md) first. It lists the rules that must hold (no source text in outputs,
+no YouTube downloads, internal files stay internal), the module map, how to test and how to deploy.
+
+**What a run produces:** `metrics.json`, `hyperframes_prompt.md` and `hyperframes_template.json` for a link. An upload
+also gives `storyboard.md` (with the AI key) and `edit_decision_list.edl`. The source video, its frames and its
+transcript are never part of the output.
+
+Pages: `/landing` (overview), `/start` (price), `/pricing` (cost breakdown), `/setup` (install guide),
+`/settings` (access token and every setting), `/` (analyzer).
+
 ## What it measures
 
 | From the transcript | From the video file (ffmpeg) |

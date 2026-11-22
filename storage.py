@@ -120,6 +120,17 @@ class ProjectStore:
                 ids.add(b.name[len(base):].rstrip("/"))
         return sorted(ids)
 
+    # ----- small JSON documents (accounts, login links) -----
+
+    def put_json(self, name: str, obj: dict) -> None:
+        self.container.upload_blob(name, json.dumps(obj, indent=2).encode(), overwrite=True)
+
+    def get_json(self, name: str) -> dict | None:
+        blob = self.container.get_blob_client(name)
+        if not blob.exists():
+            return None
+        return json.loads(blob.download_blob().readall())
+
     # ----- internal working files (kept for the operator, never delivered to customers) -----
 
     def save_internal(self, job_id: str, paths: list[Path]) -> list[str]:

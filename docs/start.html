@@ -52,6 +52,9 @@ td.n { text-align: right; white-space: nowrap; font-variant-numeric: tabular-num
 .pack .big { font-size: 2rem; margin: 6px 0; font-weight: 500; }
 .pack .note { margin-top: 8px; }
 button.primary:disabled { opacity: .5; cursor: not-allowed; }
+.pack.best { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent) inset; position: relative; }
+.pack .tag { position: absolute; top: -10px; left: 14px; background: var(--accent); color: #fff; font-size: 12px; padding: 2px 8px; border-radius: 999px; }
+a.primary { background: var(--accent); color: #fff; }
 .footer { margin-top: auto; padding: 24px 0 8px; color: var(--muted); font-size: .9rem; text-align: center; }
 .footer a { color: var(--muted); margin: 0 10px; }
 </style>
@@ -78,22 +81,7 @@ button.primary:disabled { opacity: .5; cursor: not-allowed; }
     <a class="ghost" href="/pricing" style="text-decoration:none;padding:10px 18px;border-radius:6px;background:var(--soft);color:var(--fg)">How pricing works</a>
   </div>
 
-  <section class="packs" id="packs" aria-label="Credit packs" hidden>
-    <div class="pack">
-      <h3>$1 pack</h3>
-      <div class="big" id="pk1-videos">,</div>
-      <p class="muted" style="margin:0">videos at this length</p>
-      <p class="note" id="pk1-note"></p>
-      <button class="primary" type="button" disabled style="margin-top:10px">Buy $1 (checkout coming soon)</button>
-    </div>
-    <div class="pack">
-      <h3>$10 pack</h3>
-      <div class="big" id="pk10-videos">,</div>
-      <p class="muted" style="margin:0">videos at this length</p>
-      <p class="note" id="pk10-note"></p>
-      <button class="primary" type="button" disabled style="margin-top:10px">Buy $10 (checkout coming soon)</button>
-    </div>
-  </section>
+  <section class="packs" id="packs" aria-label="Credit packs" hidden></section>
 
   <section class="card" id="card" aria-live="polite" hidden>
     <div class="muted">Your price</div>
@@ -142,11 +130,14 @@ button.primary:disabled { opacity: .5; cursor: not-allowed; }
       card.hidden = false;
       $("price").textContent = money(q.price) + " " + q.currency;
       const pk = q.packages || [];
-      pk.forEach((x) => {
-        const n = x.pays === 1 ? "1" : "10";
-        $("pk" + n + "-videos").textContent = x.videos + " videos";
-        $("pk" + n + "-note").textContent = "Card fee " + money(x.card_fee) + " once. Each " + mins + "-minute video uses " + money(x.credit_per_video) + " of credit.";
-      });
+      $("packs").innerHTML = pk.map((x) =>
+        `<div class="pack${x.best ? " best" : ""}">${x.best ? '<span class="tag">Best value</span>' : ""}
+           <h3>${esc(x.name)}</h3>
+           <div class="price">$${x.pays.toFixed(0)}</div>
+           <div class="videos">about ${x.videos} videos of ${mins} min</div>
+           <p class="note">Pay once. Card fee is paid once for the whole pack.</p>
+           <a class="primary" href="/account" style="display:block;text-align:center;text-decoration:none;padding:10px;border-radius:6px;margin-top:8px">Get ${esc(x.name)}</a>
+         </div>`).join("");
       $("packs").hidden = pk.length === 0;
       $("summary").textContent = "For a " + mins + "-minute video, about " + q.usage.shots + " shots. No minimum charge.";
       $("lines").innerHTML = q.lines.map((l) => `<tr><td>${esc(l.short)}</td><td class="n">${money(l.display)}</td></tr>`).join("") +

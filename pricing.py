@@ -122,7 +122,9 @@ def quote(usage: dict) -> dict:
 
 # Credit packs: the customer pays once, the card fee is paid once, and each video uses credit equal to its
 # cost plus margin (no per-video card fee). Estimates are how many videos a pack buys at a given length.
-PACKAGE_AMOUNTS = (1.00, 10.00)   # USD
+PACKAGE_AMOUNTS = (5.00, 20.00, 50.00)   # USD, three packs, whole dollars
+PACKAGE_NAMES = {5.00: "Starter", 20.00: "Creator", 50.00: "Studio"}
+PACKAGE_BEST = 20.00                      # the one we recommend
 
 
 def credit_per_video(duration_s: float) -> float:
@@ -137,6 +139,8 @@ def package_estimates(duration_s: float) -> list[dict]:
     for amount in PACKAGE_AMOUNTS:
         fee = _cent_up(amount * STRIPE_PERCENT + STRIPE_FIXED)
         out.append({
+            "name": PACKAGE_NAMES[amount],
+            "best": amount == PACKAGE_BEST,
             "pays": amount,
             "card_fee": fee,
             "net_to_us": round(amount - fee, 2),

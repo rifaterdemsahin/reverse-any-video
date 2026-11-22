@@ -47,12 +47,13 @@ class Quote(unittest.TestCase):
 
     def test_packages_give_whole_videos_and_cover_our_fee(self):
         pk = {x["pays"]: x for x in p.package_estimates(300)}
-        self.assertEqual(set(pk), {1.00, 10.00})
+        self.assertEqual(set(pk), {5.00, 20.00, 50.00})
         for amount, x in pk.items():
             self.assertEqual(x["videos"], int(amount // x["credit_per_video"]))
             self.assertGreater(x["net_to_us"], 0)
             self.assertLess(x["card_fee"], amount)
-        self.assertGreater(pk[10.00]["videos"], pk[1.00]["videos"])
+        self.assertLess(pk[5.00]["videos"], pk[20.00]["videos"])
+        self.assertLess(pk[20.00]["videos"], pk[50.00]["videos"])
 
     def test_storyboard_panels_capped(self):
         self.assertLessEqual(p.estimate(3000)["panels"], p.STORYBOARD_SHOTS)

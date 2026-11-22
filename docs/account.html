@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="claude:viewport-fit-sides" content="cover">
+<title>Your account</title>
+<style>
+:root { --bg: #ffffff; --fg: #202124; --muted: #5f6368; --rule: #dfe1e5; --accent: #1a73e8; --soft: #f1f3f4; --card: #fff; --warn: #b3261e; --ok: #137333;
+  --sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif; --mono: ui-monospace, Menlo, Consolas, monospace; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bg: #202124; --fg: #e8eaed; --muted: #9aa0a6; --rule: #3c4043; --accent: #8ab4f8; --soft: #303134; --card: #292a2d; --warn: #f28b82; --ok: #81c995; color-scheme: dark; } }
+:root[data-theme="dark"] { --bg: #202124; --fg: #e8eaed; --muted: #9aa0a6; --rule: #3c4043; --accent: #8ab4f8; --soft: #303134; --card: #292a2d; --warn: #f28b82; --ok: #81c995; color-scheme: dark; }
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--fg); font: 16px/1.5 var(--sans);
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 24px; }
+main { max-width: 760px; margin: 0 auto; }
+h1 { font-size: clamp(1.6rem, 5vw, 2.1rem); font-weight: 500; margin: 0 0 .3rem; }
+h2 { font-size: 1.1rem; font-weight: 600; margin: 1.8rem 0 .6rem; }
+.muted { color: var(--muted); }
+.card { background: var(--card); border: 1px solid var(--rule); border-radius: 12px; padding: 18px; margin: 12px 0; }
+.balance { font-size: 2.4rem; font-weight: 500; margin: 4px 0; }
+.row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+input[type="email"] { font: inherit; padding: 10px 12px; border: 1px solid var(--rule); border-radius: 8px; background: var(--bg); color: var(--fg); min-width: 0; flex: 1; }
+button { font: inherit; border: 0; border-radius: 8px; padding: 10px 18px; cursor: pointer; }
+button.primary { background: var(--accent); color: #fff; }
+button.ghost { background: var(--soft); color: var(--fg); }
+button:disabled { opacity: .5; cursor: not-allowed; }
+button:focus-visible, input:focus-visible, a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.packs { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; }
+.pack { border: 1px solid var(--rule); border-radius: 12px; padding: 16px; background: var(--card); position: relative; }
+.pack.best { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent) inset; }
+.pack .tag { position: absolute; top: -10px; left: 14px; background: var(--accent); color: #fff; font-size: 12px; padding: 2px 8px; border-radius: 999px; }
+.pack h3 { margin: 0; font-size: 1rem; font-weight: 600; }
+.pack .price { font-size: 1.8rem; font-weight: 500; margin: 6px 0 2px; }
+.pack .videos { color: var(--ok); font-weight: 600; }
+.msg { min-height: 1.4em; }
+.err { color: var(--warn); }
+.ok { color: var(--ok); }
+table { width: 100%; border-collapse: collapse; font-size: .94rem; }
+td { padding: 8px 4px; border-bottom: 1px solid var(--rule); vertical-align: top; }
+td.n { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.hidden { display: none !important; }
+</style>
+</head>
+<body>
+<main>
+  <div id="site-menu"></div>
+
+  <h1>Your account</h1>
+
+  <!-- Signed out: ask for an email, send a sign-in link -->
+  <section id="signin" class="card hidden" aria-labelledby="signin-h">
+    <h2 id="signin-h" style="margin-top:0">Sign in</h2>
+    <p class="muted">Enter your email. We send a sign-in link that works once and expires in 15 minutes. No password.</p>
+    <form id="login-form" class="row" onsubmit="return false">
+      <label for="email" class="muted" style="position:absolute;left:-9999px">Email</label>
+      <input id="email" type="email" autocomplete="email" placeholder="you@example.com" required>
+      <button class="primary" id="send" type="button">Email me a link</button>
+    </form>
+    <p class="msg" id="login-msg" role="status"></p>
+  </section>
+
+  <!-- Signed in: balance, packs, history -->
+  <section id="home" class="hidden" aria-labelledby="balance-h">
+    <div class="card">
+      <div class="muted" id="who"></div>
+      <h2 id="balance-h" style="margin:4px 0 0">Your credit</h2>
+      <div class="balance" id="balance">$0.00</div>
+      <p class="muted" style="margin:0">Each video uses credit when you analyse it. Credit never expires.</p>
+      <div class="row" style="margin-top:10px">
+        <button class="ghost" id="logout" type="button">Sign out</button>
+      </div>
+    </div>
+
+    <h2>Add credit</h2>
+    <p class="muted" style="margin-top:0">Pay once for a pack. The fee is paid once, so the more you buy, the less each video costs you.</p>
+    <div class="packs" id="packs"></div>
+    <p class="msg" id="buy-msg" role="status"></p>
+
+    <h2>History</h2>
+    <div class="card">
+      <table id="ledger" aria-label="Credit history"></table>
+      <p class="muted" id="no-history">No purchases or videos yet.</p>
+    </div>
+  </section>
+
+  <p class="msg" id="page-msg" role="status"></p>
+</main>
+
+<script>
+  const $ = (id) => document.getElementById(id);
+  const money = (cents) => "$" + (Math.abs(cents) / 100).toFixed(2);
+  const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  const show = (id, on) => { $(id).classList.toggle("hidden", !on); };
+
+  function say(id, text, bad) { $(id).textContent = text; $(id).className = "msg " + (bad ? "err" : "ok"); }
+
+  async function loadAccount() {
+    const r = await fetch("/api/account", { cache: "no-store", credentials: "same-origin" });
+    if (r.status === 401) { show("signin", true); show("home", false); return; }
+    const a = await r.json();
+    show("signin", false); show("home", true);
+    $("who").textContent = "Signed in as " + a.email;
+    $("balance").textContent = money(a.balance_cents);
+    const rows = a.ledger.slice().reverse().map((e) => {
+      const d = new Date(e.at * 1000).toLocaleDateString();
+      const what = e.kind === "credit" ? "Credit added" : "Video analysed";
+      const sign = e.kind === "credit" ? "+" : "−";
+      return `<tr><td>${esc(d)}<br><span class="muted">${esc(what)}${e.note ? " · " + esc(e.note) : ""}</span></td><td class="n">${sign}${money(e.cents)}</td></tr>`;
+    });
+    $("ledger").innerHTML = rows.join("");
+    show("no-history", rows.length === 0);
+    loadPacks();
+  }
+
+  async function loadPacks() {
+    // The same packs the start page shows, with the videos each one buys at a 5-minute length.
+    const q = await (await fetch("/api/quote?duration_s=300")).json();
+    $("packs").innerHTML = (q.packages || []).map((p) =>
+      `<div class="pack${p.best ? " best" : ""}">${p.best ? '<span class="tag">Best value</span>' : ""}
+         <h3>${esc(p.name)}</h3>
+         <div class="price">$${p.pays.toFixed(0)}</div>
+         <div class="videos">about ${p.videos} videos of 5 minutes</div>
+         <button class="primary" type="button" data-pack="${p.pays}" style="margin-top:10px;width:100%">Add $${p.pays.toFixed(0)}</button>
+       </div>`).join("");
+    document.querySelectorAll("[data-pack]").forEach((b) => b.addEventListener("click", () => buy(b.dataset.pack)));
+  }
+
+  async function buy(pack) {
+    say("buy-msg", "Opening secure checkout…");
+    const fd = new FormData(); fd.append("pack", pack);
+    const r = await fetch("/api/account/checkout", { method: "POST", body: fd, credentials: "same-origin" });
+    const j = await r.json();
+    if (!r.ok) { say("buy-msg", j.error || "Checkout is not available yet.", true); return; }
+    location.href = j.url;
+  }
+
+  $("send").addEventListener("click", async () => {
+    const fd = new FormData(); fd.append("email", $("email").value.trim());
+    say("login-msg", "Sending…");
+    const r = await fetch("/api/account/login", { method: "POST", body: fd });
+    const j = await r.json();
+    if (!r.ok) { say("login-msg", j.error || "Could not send the link.", true); return; }
+    say("login-msg", "Check your email for the sign-in link. It expires in 15 minutes.");
+  });
+  $("email").addEventListener("keydown", (e) => { if (e.key === "Enter") $("send").click(); });
+  $("logout").addEventListener("click", async () => { await fetch("/api/account/logout", { method: "POST" }); location.href = "/account"; });
+
+  const params = new URLSearchParams(location.search);
+  if (params.get("paid")) say("page-msg", "Thank you. Your credit appears here once the payment is confirmed.");
+  if (params.get("cancelled")) say("page-msg", "Checkout was cancelled. No charge was made.", true);
+  loadAccount().catch(() => say("page-msg", "Could not load your account. Try again.", true));
+</script>
+<script src="/menu.js" defer></script>
+</body>
+</html>
