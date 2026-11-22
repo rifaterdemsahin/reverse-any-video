@@ -216,7 +216,7 @@ details summary { cursor: pointer; font-weight: 600; font-size: 14px; margin-bot
         <div id="server-box" class="server" hidden>
           <span class="label">Server · fetch the URL for me</span>
           <label class="check" for="srv-download"><input type="checkbox" id="srv-download" checked> Download the video and detect cuts with ffmpeg</label>
-          <div class="field" id="srv-token-wrap" hidden><label class="label" for="srv-token">Access token</label><input type="text" id="srv-token" autocomplete="off"></div>
+          <div class="field" id="srv-token-wrap" hidden><label class="label" for="srv-token">Access token</label><input type="text" id="srv-token" autocomplete="off"><p class="muted" style="font-size:12px;margin:6px 0 0">No token? Set a new one on the server with <code>TOKEN=$(openssl rand -hex 24) &amp;&amp; fly secrets set --app reverse-any-video ACCESS_TOKEN=$TOKEN &amp;&amp; echo "$TOKEN" | pbcopy &amp;&amp; echo copied</code>. Details on the <a href="/settings">settings page</a>.</p></div>
           <button id="srv-run" type="button">Fetch and analyze URL</button>
           <div id="srv-files" class="files"></div>
         </div>
