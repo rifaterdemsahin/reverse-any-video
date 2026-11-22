@@ -3,6 +3,7 @@
 (function () {
   var LINKS = [
     { href: "/landing", label: "🏠 Home" },
+    { href: "/start", label: "🔎 Get a price" },
     { href: "/", label: "🎬 Analyzer" },
     { href: "/pricing", label: "💷 Pricing" },
     { href: "/setup", label: "🧭 Setup guide" },
