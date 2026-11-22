@@ -1,0 +1,1317 @@
+{
+  "meta": {
+    "id": "KnqTiAXUH7M",
+    "url": "https://www.youtube.com/watch?v=KnqTiAXUH7M",
+    "title": "How to reverse engineer any editing style (Turned it into a skill)",
+    "channel": "Taha El Harti | Making AI Useful",
+    "channel_url": "https://www.youtube.com/channel/UC4LFfJ1aYvmpKCfd_XVvNrQ",
+    "upload_date": "20261107",
+    "duration_s": 306,
+    "views": 22256,
+    "likes": 541,
+    "description": "https://www.skool.com/tahas-group-6925\nThe free skill is in the group.\n\n0:00 Reverse engineer any video\n1:23 Why you would want this\n1:49 How it works\n2:42 The test\n3:03 Set it up\n3:58 What it can't do",
+    "chapters": [
+      {
+        "start_time": 0,
+        "title": "Reverse engineer any video",
+        "end_time": 83
+      },
+      {
+        "start_time": 83,
+        "title": "Why you would want this",
+        "end_time": 109
+      },
+      {
+        "start_time": 109,
+        "title": "How it works",
+        "end_time": 162
+      },
+      {
+        "start_time": 162,
+        "title": "The test",
+        "end_time": 183
+      },
+      {
+        "start_time": 183,
+        "title": "Set it up",
+        "end_time": 238
+      },
+      {
+        "start_time": 238,
+        "title": "What it can't do",
+        "end_time": 306
+      }
+    ],
+    "tags": [],
+    "thumbnail": "https://i.ytimg.com/vi_webp/KnqTiAXUH7M/maxresdefault.webp",
+    "source": "yt-dlp"
+  },
+  "transcript_format": "youtube-json3",
+  "script": {
+    "segments": 160,
+    "words": 1081,
+    "duration_s": 306.4,
+    "wpm": 216,
+    "avg_sentence_words": 12.6,
+    "questions": 5,
+    "hook": {
+      "text": "They wait at the water's edge perfectly still. Then they burst out the water faster than you could ever react. >> I just built for videos. You can now reverse engineer any video you want. The clip you saw was made with AI, and I put the entire thing",
+      "seconds": 17.6,
+      "kinds": [
+        "statement"
+      ]
+    },
+    "sections": [
+      {
+        "start": 0.2,
+        "end": 46.0,
+        "words": 147,
+        "wpm": 193,
+        "label": "They wait at the water's edge perfectly still.",
+        "text": "They wait at the water's edge perfectly still. Then they burst out the water faster than you could ever react. >> I just built for videos. You can now reverse engineer any video you want. The clip you saw was made with AI, and I put the entire thing in a singular skill for free. It pulled out all the cuts, all the colors, pacing, even the way things move on screen. Now, if you're new to it stands for reverse engineer anything. It's a repo on GitHub with over 400,000 stars, and the entire point of it is that you can point it any software you want, and it'll take it apart so you can reconstruct it. But if you were to give it a video file, it wouldn't know what to do with it. So I took its method and I built it for video."
+      },
+      {
+        "start": 43.8,
+        "end": 80.2,
+        "words": 141,
+        "wpm": 232,
+        "label": "So what does this skill actually do?",
+        "text": "So what does this skill actually do? Well, the way it works is you give it any video, it'll measure, like I said, the cuts, the colors, the words, etc. It'll then read the frames then it shows you how the video was essentially put together. Then it rebuilds that style and checks the rebuild against the original. At the end of this video, you'll be able to reverse engineer any video you want. So here's the plan. First, I'll show you how this works, then we'll test it on a video where I already know the answer, and lastly, we'll set it up together. And if you've never done anything like this, that's completely fine. You can do all of this by just talking to Claude. The most important part, which is the skill, is actually free. It'll be the"
+      },
+      {
+        "start": 78.9,
+        "end": 110.5,
+        "words": 114,
+        "wpm": 216,
+        "label": "first thing in the description.",
+        "text": "first thing in the description. If you get stuck, just jump in there and ask me and I will try to help you out. So the question becomes, well, why would you even want this? Well, part of my job, day to day, is working out how somebody made a video. And a finished video is like a locked box. You can see the result, but you can never truly get the product file. REA a while back went viral because it opens that box up for software. You see a feature you like and your agent works out how it's built with evidence. So I wanted that same thing but for a video."
+      },
+      {
+        "start": 108.9,
+        "end": 149.59199999999998,
+        "words": 130,
+        "wpm": 192,
+        "label": "Now, here's the thing.",
+        "text": "Now, here's the thing. How does Claude even watch a video? Well, the trick is that it doesn't. Claude can read pictures, but it cannot play a video file. So there's a free tool called that essentially breaks the video down for it. Number one, it'll find every cut by checking how much of the picture changes from one frame to the next. Number two, it'll actually pull those frames out so Claude can read the type, the layout, and the motion. Then number three, it'll write down every word and how fast they're spoken. Number four, it measures the sound. Number five, colors. And here's the part that I stole from REA. It'll even show you the evidence for every answer and it tells you what it doesn't know."
+      },
+      {
+        "start": 147.092,
+        "end": 180.59199999999998,
+        "words": 107,
+        "wpm": 192,
+        "label": "So, every finding gets one of three labels.",
+        "text": "So, every finding gets one of three labels. Seen means it's measured and you get a number timestamp. Inferred means it's a reasonable guess and it tells you why. An unknown just means the file can't tell you what software is was used to make a specific video. We don't know. I tested on one of my own videos because I have the actual timeline and then I tuned it on how the chapters and then scored the half it hadn't seen. It found 82% of the cuts. It caught every single punch in and it missed the jump cuts because almost nothing changes in the pictures."
+      },
+      {
+        "start": 179.192,
+        "end": 235.992,
+        "words": 202,
+        "wpm": 213,
+        "label": "So, I would treat the cut count as a minimum.",
+        "text": "So, I would treat the cut count as a minimum. And then it also read my fonts from the frames alone. All right. On that note, let's actually build our own version together. Step one is to install the free tools. It's one line and it's on the screen. Step two is to put the skills in your Claude skills folder. And then step three is you're going to want to run the health check. When it says ready, you're completely good. And it may ask you by the way while you're doing this for a download of a speech model, that's completely normal. It should be around half a gigabyte. It's only one time. So, if it asks you to do that, just let it go through. Step four is to pick your video, give it a link or a file that you already have. Pick a short section first because 30 seconds of video measures in about 6 seconds. And then step five, tell Claude reverse engineer this video with the reverse any video skill. You'll get the evidence report as well as the style file. And then step six, ask it to rebuild that style on your own topic."
+      },
+      {
+        "start": 234.092,
+        "end": 260.594,
+        "words": 75,
+        "wpm": 170,
+        "label": "Finally, step seven, you can run the compare, fix the gaps, and then watch it all yourself…",
+        "text": "Finally, step seven, you can run the compare, fix the gaps, and then watch it all yourself. Now, this is obviously super cool, but there's a few things that this thing cannot do. For example, it can't see project files, layers, or effects sync. It also can't tell you the exact font names, only what it looks likes. And sound effects are particularly weak because Claude cannot hear audio. So I would double check those."
+      },
+      {
+        "start": 259.194,
+        "end": 300.394,
+        "words": 165,
+        "wpm": 240,
+        "label": "Now, can you do this with somebody else's video, somebody see on YouTube?",
+        "text": "Now, can you do this with somebody else's video, somebody see on YouTube? Absolutely, but I would use it to study the style and then make your own video with your own material. The rules depend on where you live, so obviously check them before to make sure that you know what you're doing. And the tools cost nothing on top of my Claude plan. So we took a locked box and we measured everything we could. The skill's free. It'll be the first thing in the description. Thank you so much for watching. If you appreciated this or if there's something that you learned from it, subscribe because I'm trying to make as many of these videos as possible and you subscribing tells me that you want more of this type of content. What video should I do next? Let me know in the comments. Otherwise, thank you for watching. And if you want to make Netflix style documentaries, click this link right here."
+      }
+    ],
+    "ctas": [
+      {
+        "t": 15.2,
+        "text": "in a singular skill for free. It pulled",
+        "match": "free"
+      },
+      {
+        "t": 77.3,
+        "text": "skill, is actually free. It'll be the",
+        "match": "free"
+      },
+      {
+        "t": 78.9,
+        "text": "first thing in the description. If you",
+        "match": "description"
+      },
+      {
+        "t": 117.3,
+        "text": "play a video file. So there's a free",
+        "match": "free"
+      },
+      {
+        "t": 188.992,
+        "text": "Step one is to install the free tools.",
+        "match": "free"
+      },
+      {
+        "t": 202.292,
+        "text": "you're doing this for a download of a",
+        "match": "download"
+      },
+      {
+        "t": 279.194,
+        "text": "The skill's free. It'll be the first",
+        "match": "free"
+      },
+      {
+        "t": 280.394,
+        "text": "thing in the description. Thank you so",
+        "match": "description"
+      },
+      {
+        "t": 284.294,
+        "text": "learned from it, subscribe because I'm",
+        "match": "subscribe"
+      }
+    ],
+    "open_loops": [
+      {
+        "t": 63.6,
+        "text": "So here's the plan. First, I'll show you",
+        "match": "I'll show you"
+      }
+    ],
+    "you_vs_i": {
+      "you": 53,
+      "i": 25,
+      "ratio": 2.12
+    },
+    "fillers": {
+      "you know": 1
+    },
+    "keywords": [
+      [
+        "video",
+        22
+      ],
+      [
+        "it'll",
+        9
+      ],
+      [
+        "claude",
+        8
+      ],
+      [
+        "step",
+        7
+      ],
+      [
+        "file",
+        6
+      ],
+      [
+        "number",
+        6
+      ],
+      [
+        "reverse",
+        5
+      ],
+      [
+        "free",
+        5
+      ],
+      [
+        "well",
+        5
+      ],
+      [
+        "style",
+        5
+      ],
+      [
+        "every",
+        5
+      ],
+      [
+        "engineer",
+        4
+      ],
+      [
+        "skill",
+        4
+      ],
+      [
+        "cuts",
+        4
+      ],
+      [
+        "even",
+        4
+      ]
+    ],
+    "pace_30s": [
+      {
+        "t": 0,
+        "words": 92,
+        "wpm": 184
+      },
+      {
+        "t": 30,
+        "words": 122,
+        "wpm": 244
+      },
+      {
+        "t": 60,
+        "words": 121,
+        "wpm": 242
+      },
+      {
+        "t": 90,
+        "words": 102,
+        "wpm": 204
+      },
+      {
+        "t": 120,
+        "words": 109,
+        "wpm": 218
+      },
+      {
+        "t": 150,
+        "words": 102,
+        "wpm": 204
+      },
+      {
+        "t": 180,
+        "words": 120,
+        "wpm": 240
+      },
+      {
+        "t": 210,
+        "words": 97,
+        "wpm": 194
+      },
+      {
+        "t": 240,
+        "words": 99,
+        "wpm": 198
+      },
+      {
+        "t": 270,
+        "words": 117,
+        "wpm": 234
+      },
+      {
+        "t": 300,
+        "words": 0,
+        "wpm": 0
+      }
+    ]
+  },
+  "video": {
+    "duration_s": 306.414,
+    "has_audio": true,
+    "width": 854,
+    "height": 480,
+    "fps": 30.0,
+    "scene_threshold": 0.3,
+    "cuts": [
+      6.7,
+      7.8,
+      8.533,
+      9.4,
+      11.467,
+      13.967,
+      15.3,
+      16.533,
+      17.0,
+      17.9,
+      20.4,
+      21.333,
+      22.6,
+      24.4,
+      30.533,
+      32.4,
+      34.367,
+      35.533,
+      37.033,
+      38.6,
+      40.2,
+      41.533,
+      43.433,
+      45.767,
+      48.633,
+      55.567,
+      59.533,
+      62.033,
+      63.667,
+      70.7,
+      73.3,
+      75.533,
+      77.333,
+      80.1,
+      83.267,
+      85.233,
+      86.4,
+      87.8,
+      91.4,
+      106.5,
+      109.7,
+      111.0,
+      112.767,
+      115.433,
+      116.733,
+      118.467,
+      120.467,
+      122.8,
+      127.633,
+      133.3,
+      140.8,
+      143.733,
+      146.967,
+      150.467,
+      158.4,
+      159.6,
+      163.733,
+      165.033,
+      169.733,
+      171.667,
+      173.267,
+      174.4,
+      175.3,
+      176.9,
+      179.2,
+      181.433,
+      185.033,
+      188.433,
+      190.567,
+      200.7,
+      203.5,
+      208.767,
+      212.833,
+      219.233,
+      221.5,
+      228.733,
+      230.6,
+      237.267,
+      238.167,
+      239.467,
+      241.633,
+      244.033,
+      247.733,
+      249.9,
+      251.7,
+      254.5,
+      256.6,
+      258.8,
+      262.3,
+      264.8,
+      267.3,
+      272.033,
+      275.3,
+      276.7,
+      278.667,
+      281.267,
+      284.933,
+      287.467,
+      290.867,
+      293.467,
+      295.033
+    ],
+    "shots": 102,
+    "shot_avg_s": 3.0,
+    "shot_median_s": 2.28,
+    "shot_min_s": 0.47,
+    "shot_max_s": 15.1,
+    "cuts_per_min": 19.8,
+    "cuts_30s": [
+      {
+        "t": 0,
+        "cuts": 14
+      },
+      {
+        "t": 30,
+        "cuts": 13
+      },
+      {
+        "t": 60,
+        "cuts": 11
+      },
+      {
+        "t": 90,
+        "cuts": 8
+      },
+      {
+        "t": 120,
+        "cuts": 7
+      },
+      {
+        "t": 150,
+        "cuts": 12
+      },
+      {
+        "t": 180,
+        "cuts": 7
+      },
+      {
+        "t": 210,
+        "cuts": 8
+      },
+      {
+        "t": 240,
+        "cuts": 11
+      },
+      {
+        "t": 270,
+        "cuts": 10
+      },
+      {
+        "t": 300,
+        "cuts": 0
+      }
+    ],
+    "first_cut_s": 6.7,
+    "silences": [
+      {
+        "start": 84.07,
+        "end": 85.26
+      },
+      {
+        "start": 184.18,
+        "end": 184.96
+      },
+      {
+        "start": 191.78,
+        "end": 192.3
+      },
+      {
+        "start": 195.87,
+        "end": 196.44
+      },
+      {
+        "start": 206.17,
+        "end": 206.75
+      },
+      {
+        "start": 220.23,
+        "end": 220.91
+      },
+      {
+        "start": 225.02,
+        "end": 225.82
+      },
+      {
+        "start": 226.8,
+        "end": 227.33
+      },
+      {
+        "start": 228.23,
+        "end": 228.74
+      }
+    ],
+    "silence_total_s": 6.2
+  },
+  "segments": [
+    {
+      "start": 0.2,
+      "end": 3.9000000000000004,
+      "text": "They wait at the water's edge perfectly"
+    },
+    {
+      "start": 1.964,
+      "end": 6.800000000000001,
+      "text": "still. Then they burst out the"
+    },
+    {
+      "start": 3.9,
+      "end": 7.8,
+      "text": "water faster than you could ever react."
+    },
+    {
+      "start": 6.8,
+      "end": 10.1,
+      "text": ">> I just built"
+    },
+    {
+      "start": 7.8,
+      "end": 12.899999999999999,
+      "text": "for videos. You can now reverse engineer"
+    },
+    {
+      "start": 10.1,
+      "end": 15.2,
+      "text": "any video you want. The clip you saw was"
+    },
+    {
+      "start": 12.9,
+      "end": 17.6,
+      "text": "made with AI, and I put the entire thing"
+    },
+    {
+      "start": 15.2,
+      "end": 19.7,
+      "text": "in a singular skill for free. It pulled"
+    },
+    {
+      "start": 17.6,
+      "end": 22.0,
+      "text": "out all the cuts, all the colors,"
+    },
+    {
+      "start": 19.7,
+      "end": 24.799999999999997,
+      "text": "pacing, even the way things move on"
+    },
+    {
+      "start": 22.0,
+      "end": 27.2,
+      "text": "screen. Now, if you're new to it stands"
+    },
+    {
+      "start": 24.8,
+      "end": 30.4,
+      "text": "for reverse engineer anything. It's a"
+    },
+    {
+      "start": 27.2,
+      "end": 32.4,
+      "text": "repo on GitHub with over 400,000 stars,"
+    },
+    {
+      "start": 30.4,
+      "end": 34.4,
+      "text": "and the entire point of it is that you"
+    },
+    {
+      "start": 32.4,
+      "end": 35.9,
+      "text": "can point it any software you want, and"
+    },
+    {
+      "start": 34.4,
+      "end": 37.8,
+      "text": "it'll take it apart so you can"
+    },
+    {
+      "start": 35.9,
+      "end": 39.5,
+      "text": "reconstruct it. But if you were to give"
+    },
+    {
+      "start": 37.8,
+      "end": 41.599999999999994,
+      "text": "it a video file, it wouldn't know what"
+    },
+    {
+      "start": 39.5,
+      "end": 43.8,
+      "text": "to do with it. So I took its method and"
+    },
+    {
+      "start": 41.6,
+      "end": 46.0,
+      "text": "I built it for video."
+    },
+    {
+      "start": 43.8,
+      "end": 47.9,
+      "text": "So what does this skill actually do?"
+    },
+    {
+      "start": 46.0,
+      "end": 49.7,
+      "text": "Well, the way it works is you give it"
+    },
+    {
+      "start": 47.9,
+      "end": 51.5,
+      "text": "any video, it'll measure, like I said,"
+    },
+    {
+      "start": 49.7,
+      "end": 53.2,
+      "text": "the cuts, the colors, the words, etc."
+    },
+    {
+      "start": 51.5,
+      "end": 54.9,
+      "text": "It'll then read the frames then it shows"
+    },
+    {
+      "start": 53.2,
+      "end": 57.0,
+      "text": "you how the video was essentially put"
+    },
+    {
+      "start": 54.9,
+      "end": 58.5,
+      "text": "together. Then it rebuilds that style"
+    },
+    {
+      "start": 57.0,
+      "end": 59.6,
+      "text": "and checks the rebuild against the"
+    },
+    {
+      "start": 58.5,
+      "end": 61.0,
+      "text": "original."
+    },
+    {
+      "start": 59.6,
+      "end": 63.6,
+      "text": "At the end of this video, you'll be able"
+    },
+    {
+      "start": 61.0,
+      "end": 65.4,
+      "text": "to reverse engineer any video you want."
+    },
+    {
+      "start": 63.6,
+      "end": 67.0,
+      "text": "So here's the plan. First, I'll show you"
+    },
+    {
+      "start": 65.4,
+      "end": 69.10000000000001,
+      "text": "how this works, then we'll test it on a"
+    },
+    {
+      "start": 67.0,
+      "end": 70.7,
+      "text": "video where I already know the answer,"
+    },
+    {
+      "start": 69.1,
+      "end": 71.69999999999999,
+      "text": "and lastly, we'll set it up together."
+    },
+    {
+      "start": 70.7,
+      "end": 73.60000000000001,
+      "text": "And if you've never done anything like"
+    },
+    {
+      "start": 71.7,
+      "end": 76.10000000000001,
+      "text": "this, that's completely fine. You can do"
+    },
+    {
+      "start": 73.6,
+      "end": 77.3,
+      "text": "all of this by just talking to Claude."
+    },
+    {
+      "start": 76.1,
+      "end": 78.89999999999999,
+      "text": "The most important part, which is the"
+    },
+    {
+      "start": 77.3,
+      "end": 80.2,
+      "text": "skill, is actually free. It'll be the"
+    },
+    {
+      "start": 78.9,
+      "end": 82.2,
+      "text": "first thing in the description. If you"
+    },
+    {
+      "start": 80.2,
+      "end": 85.3,
+      "text": "get stuck, just jump in there and ask me"
+    },
+    {
+      "start": 82.2,
+      "end": 85.3,
+      "text": "and I will try to help you out."
+    },
+    {
+      "start": 85.4,
+      "end": 88.5,
+      "text": "So the question becomes, well, why would"
+    },
+    {
+      "start": 86.8,
+      "end": 90.1,
+      "text": "you even want this? Well, part of my"
+    },
+    {
+      "start": 88.5,
+      "end": 92.1,
+      "text": "job, day to day, is working out how"
+    },
+    {
+      "start": 90.1,
+      "end": 94.3,
+      "text": "somebody made a video. And a finished"
+    },
+    {
+      "start": 92.1,
+      "end": 96.6,
+      "text": "video is like a locked box. You can see"
+    },
+    {
+      "start": 94.3,
+      "end": 98.0,
+      "text": "the result, but you can never truly get"
+    },
+    {
+      "start": 96.6,
+      "end": 100.19999999999999,
+      "text": "the product file."
+    },
+    {
+      "start": 98.0,
+      "end": 102.5,
+      "text": "REA a while back went viral because it"
+    },
+    {
+      "start": 100.2,
+      "end": 104.3,
+      "text": "opens that box up for software. You see"
+    },
+    {
+      "start": 102.5,
+      "end": 106.9,
+      "text": "a feature you like and your agent works"
+    },
+    {
+      "start": 104.3,
+      "end": 108.89999999999999,
+      "text": "out how it's built with evidence. So I"
+    },
+    {
+      "start": 106.9,
+      "end": 110.5,
+      "text": "wanted that same thing but for a video."
+    },
+    {
+      "start": 108.9,
+      "end": 113.30000000000001,
+      "text": "Now, here's the thing."
+    },
+    {
+      "start": 110.5,
+      "end": 115.5,
+      "text": "How does Claude even watch a video?"
+    },
+    {
+      "start": 113.3,
+      "end": 117.3,
+      "text": "Well, the trick is that it doesn't."
+    },
+    {
+      "start": 115.5,
+      "end": 119.0,
+      "text": "Claude can read pictures, but it cannot"
+    },
+    {
+      "start": 117.3,
+      "end": 120.49199999999999,
+      "text": "play a video file. So there's a free"
+    },
+    {
+      "start": 119.0,
+      "end": 122.292,
+      "text": "tool called"
+    },
+    {
+      "start": 120.492,
+      "end": 124.092,
+      "text": "that essentially breaks the video down"
+    },
+    {
+      "start": 122.292,
+      "end": 125.69200000000001,
+      "text": "for it. Number one, it'll find every cut"
+    },
+    {
+      "start": 124.092,
+      "end": 127.692,
+      "text": "by checking how much of the picture"
+    },
+    {
+      "start": 125.692,
+      "end": 129.292,
+      "text": "changes from one frame to the next."
+    },
+    {
+      "start": 127.692,
+      "end": 131.692,
+      "text": "Number two, it'll actually pull those"
+    },
+    {
+      "start": 129.292,
+      "end": 133.692,
+      "text": "frames out so Claude can read the type,"
+    },
+    {
+      "start": 131.692,
+      "end": 135.692,
+      "text": "the layout, and the motion. Then number"
+    },
+    {
+      "start": 133.692,
+      "end": 138.192,
+      "text": "three, it'll write down every word and"
+    },
+    {
+      "start": 135.692,
+      "end": 140.792,
+      "text": "how fast they're spoken. Number four, it"
+    },
+    {
+      "start": 138.192,
+      "end": 141.99200000000002,
+      "text": "measures the sound. Number five, colors."
+    },
+    {
+      "start": 140.792,
+      "end": 144.292,
+      "text": "And here's the part that I stole from"
+    },
+    {
+      "start": 141.992,
+      "end": 145.992,
+      "text": "REA. It'll even show you the evidence"
+    },
+    {
+      "start": 144.292,
+      "end": 147.092,
+      "text": "for every answer and it tells you what"
+    },
+    {
+      "start": 145.992,
+      "end": 149.59199999999998,
+      "text": "it doesn't know."
+    },
+    {
+      "start": 147.092,
+      "end": 151.99200000000002,
+      "text": "So, every finding gets one of three"
+    },
+    {
+      "start": 149.592,
+      "end": 153.99200000000002,
+      "text": "labels. Seen means it's measured and you"
+    },
+    {
+      "start": 151.992,
+      "end": 155.992,
+      "text": "get a number timestamp."
+    },
+    {
+      "start": 153.992,
+      "end": 158.09199999999998,
+      "text": "Inferred means it's a reasonable guess"
+    },
+    {
+      "start": 155.992,
+      "end": 159.892,
+      "text": "and it tells you why. An unknown just"
+    },
+    {
+      "start": 158.092,
+      "end": 161.592,
+      "text": "means the file can't tell you what"
+    },
+    {
+      "start": 159.892,
+      "end": 163.192,
+      "text": "software is was used to make a specific"
+    },
+    {
+      "start": 161.592,
+      "end": 164.792,
+      "text": "video. We don't know."
+    },
+    {
+      "start": 163.192,
+      "end": 166.49200000000002,
+      "text": "I tested on one of my own videos because"
+    },
+    {
+      "start": 164.792,
+      "end": 169.292,
+      "text": "I have the actual timeline and then I"
+    },
+    {
+      "start": 166.492,
+      "end": 171.392,
+      "text": "tuned it on how the chapters and then"
+    },
+    {
+      "start": 169.292,
+      "end": 173.892,
+      "text": "scored the half it hadn't seen."
+    },
+    {
+      "start": 171.392,
+      "end": 175.392,
+      "text": "It found 82% of the cuts. It caught"
+    },
+    {
+      "start": 173.892,
+      "end": 176.892,
+      "text": "every single punch in"
+    },
+    {
+      "start": 175.392,
+      "end": 179.192,
+      "text": "and it missed the jump cuts because"
+    },
+    {
+      "start": 176.892,
+      "end": 180.59199999999998,
+      "text": "almost nothing changes in the pictures."
+    },
+    {
+      "start": 179.192,
+      "end": 181.49200000000002,
+      "text": "So, I would treat the cut count as a"
+    },
+    {
+      "start": 180.592,
+      "end": 182.99200000000002,
+      "text": "minimum."
+    },
+    {
+      "start": 181.492,
+      "end": 184.992,
+      "text": "And then it also read my fonts from the"
+    },
+    {
+      "start": 182.992,
+      "end": 185.792,
+      "text": "frames alone."
+    },
+    {
+      "start": 184.992,
+      "end": 187.492,
+      "text": "All right."
+    },
+    {
+      "start": 185.792,
+      "end": 188.992,
+      "text": "On that note, let's actually build our"
+    },
+    {
+      "start": 187.492,
+      "end": 190.59199999999998,
+      "text": "own version together."
+    },
+    {
+      "start": 188.992,
+      "end": 192.392,
+      "text": "Step one is to install the free tools."
+    },
+    {
+      "start": 190.592,
+      "end": 194.49200000000002,
+      "text": "It's one line and it's on the screen."
+    },
+    {
+      "start": 192.392,
+      "end": 196.492,
+      "text": "Step two is to put the skills in your"
+    },
+    {
+      "start": 194.492,
+      "end": 197.59199999999998,
+      "text": "Claude skills folder."
+    },
+    {
+      "start": 196.492,
+      "end": 199.19199999999998,
+      "text": "And then step three is you're going to"
+    },
+    {
+      "start": 197.592,
+      "end": 201.192,
+      "text": "want to run the health check. When it"
+    },
+    {
+      "start": 199.192,
+      "end": 202.292,
+      "text": "says ready, you're completely good."
+    },
+    {
+      "start": 201.192,
+      "end": 204.292,
+      "text": "And it may ask you by the way while"
+    },
+    {
+      "start": 202.292,
+      "end": 206.792,
+      "text": "you're doing this for a download of a"
+    },
+    {
+      "start": 204.292,
+      "end": 207.892,
+      "text": "speech model, that's completely normal."
+    },
+    {
+      "start": 206.792,
+      "end": 209.592,
+      "text": "It should be around half a gigabyte."
+    },
+    {
+      "start": 207.892,
+      "end": 211.492,
+      "text": "It's only one time. So, if it asks you"
+    },
+    {
+      "start": 209.592,
+      "end": 213.092,
+      "text": "to do that, just let it go through. Step"
+    },
+    {
+      "start": 211.492,
+      "end": 215.09199999999998,
+      "text": "four is to pick your video, give it a"
+    },
+    {
+      "start": 213.092,
+      "end": 216.692,
+      "text": "link or a file that you already have."
+    },
+    {
+      "start": 215.092,
+      "end": 218.692,
+      "text": "Pick a short section first because 30"
+    },
+    {
+      "start": 216.692,
+      "end": 220.99200000000002,
+      "text": "seconds of video measures in about 6"
+    },
+    {
+      "start": 218.692,
+      "end": 223.092,
+      "text": "seconds. And then step five,"
+    },
+    {
+      "start": 220.992,
+      "end": 225.892,
+      "text": "tell Claude reverse engineer this video"
+    },
+    {
+      "start": 223.092,
+      "end": 227.592,
+      "text": "with the reverse any video skill."
+    },
+    {
+      "start": 225.892,
+      "end": 228.792,
+      "text": "You'll get the evidence report as well"
+    },
+    {
+      "start": 227.592,
+      "end": 231.292,
+      "text": "as the style file."
+    },
+    {
+      "start": 228.792,
+      "end": 234.092,
+      "text": "And then step six, ask it to rebuild"
+    },
+    {
+      "start": 231.292,
+      "end": 235.992,
+      "text": "that style on your own topic."
+    },
+    {
+      "start": 234.092,
+      "end": 237.792,
+      "text": "Finally, step seven, you can run the"
+    },
+    {
+      "start": 235.992,
+      "end": 239.792,
+      "text": "compare, fix the gaps, and then watch it"
+    },
+    {
+      "start": 237.792,
+      "end": 241.792,
+      "text": "all yourself."
+    },
+    {
+      "start": 239.792,
+      "end": 243.094,
+      "text": "Now, this is obviously super cool, but"
+    },
+    {
+      "start": 241.792,
+      "end": 244.994,
+      "text": "there's a few things that this thing"
+    },
+    {
+      "start": 243.094,
+      "end": 247.79399999999998,
+      "text": "cannot do. For example, it can't see"
+    },
+    {
+      "start": 244.994,
+      "end": 249.394,
+      "text": "project files, layers, or effects sync."
+    },
+    {
+      "start": 247.794,
+      "end": 251.794,
+      "text": "It also can't tell you the exact font"
+    },
+    {
+      "start": 249.394,
+      "end": 254.19400000000002,
+      "text": "names, only what it looks likes."
+    },
+    {
+      "start": 251.794,
+      "end": 257.394,
+      "text": "And sound effects are particularly weak"
+    },
+    {
+      "start": 254.194,
+      "end": 259.19399999999996,
+      "text": "because Claude cannot hear audio. So I"
+    },
+    {
+      "start": 257.394,
+      "end": 260.594,
+      "text": "would double check those."
+    },
+    {
+      "start": 259.194,
+      "end": 262.29400000000004,
+      "text": "Now, can you do this with somebody"
+    },
+    {
+      "start": 260.594,
+      "end": 264.094,
+      "text": "else's video, somebody see on YouTube?"
+    },
+    {
+      "start": 262.294,
+      "end": 265.99399999999997,
+      "text": "Absolutely, but I would use it to study"
+    },
+    {
+      "start": 264.094,
+      "end": 267.694,
+      "text": "the style and then make your own video"
+    },
+    {
+      "start": 265.994,
+      "end": 269.09400000000005,
+      "text": "with your own material."
+    },
+    {
+      "start": 267.694,
+      "end": 270.994,
+      "text": "The rules depend on where you live, so"
+    },
+    {
+      "start": 269.094,
+      "end": 272.394,
+      "text": "obviously check them before to make sure"
+    },
+    {
+      "start": 270.994,
+      "end": 274.194,
+      "text": "that you know what you're doing."
+    },
+    {
+      "start": 272.394,
+      "end": 275.394,
+      "text": "And the tools cost nothing on top of my"
+    },
+    {
+      "start": 274.194,
+      "end": 277.494,
+      "text": "Claude plan."
+    },
+    {
+      "start": 275.394,
+      "end": 279.194,
+      "text": "So we took a locked box and we measured"
+    },
+    {
+      "start": 277.494,
+      "end": 280.394,
+      "text": "everything we could."
+    },
+    {
+      "start": 279.194,
+      "end": 281.694,
+      "text": "The skill's free. It'll be the first"
+    },
+    {
+      "start": 280.394,
+      "end": 282.994,
+      "text": "thing in the description. Thank you so"
+    },
+    {
+      "start": 281.694,
+      "end": 284.29400000000004,
+      "text": "much for watching. If you appreciated"
+    },
+    {
+      "start": 282.994,
+      "end": 285.59400000000005,
+      "text": "this or if there's something that you"
+    },
+    {
+      "start": 284.294,
+      "end": 286.794,
+      "text": "learned from it, subscribe because I'm"
+    },
+    {
+      "start": 285.594,
+      "end": 288.394,
+      "text": "trying to make as many of these videos"
+    },
+    {
+      "start": 286.794,
+      "end": 289.794,
+      "text": "as possible and you subscribing tells me"
+    },
+    {
+      "start": 288.394,
+      "end": 290.894,
+      "text": "that you want more of this type of"
+    },
+    {
+      "start": 289.794,
+      "end": 292.894,
+      "text": "content."
+    },
+    {
+      "start": 290.894,
+      "end": 294.094,
+      "text": "What video should I do next? Let me know"
+    },
+    {
+      "start": 292.894,
+      "end": 296.094,
+      "text": "in the comments. Otherwise, thank you"
+    },
+    {
+      "start": 294.094,
+      "end": 297.894,
+      "text": "for watching. And if you want to make"
+    },
+    {
+      "start": 296.094,
+      "end": 300.394,
+      "text": "Netflix style documentaries, click this"
+    },
+    {
+      "start": 297.894,
+      "end": 300.394,
+      "text": "link right here."
+    }
+  ]
+}

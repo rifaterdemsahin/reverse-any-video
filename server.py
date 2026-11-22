@@ -8,6 +8,10 @@
                                   plan.json, captions.srt, project.zip, video.mp4
   POST /api/plans                 Claude writes a new script in the measured style
   POST /api/renders               build a HyperFrames project from a plan and render it
+  GET  /api/jobs/{id}/files/{f}   report.html, SKILL.md, script.md or analysis.json
+  POST /api/projects              create a project (needs X-Access-Token if set)
+  GET  /api/projects              list projects
+  GET  /api/projects/{slug}       one project and its job ids
 
 POST /api/jobs fields (at least one of url, transcript, transcript_file, video):
   url              video URL (YouTube by default, see ALLOWED_URL_HOSTS)
@@ -16,6 +20,7 @@ POST /api/jobs fields (at least one of url, transcript, transcript_file, video):
   transcript       transcript text in any supported format
   transcript_file  transcript upload
   video            video file upload
+  project          slug of an existing project: the outputs are saved to Azure under its folder
 
 Environment:
   DATA_DIR           where job folders live (default /tmp/rav-jobs)
@@ -24,12 +29,15 @@ Environment:
   MAX_DURATION       longest video to download, seconds (default 1800)
   JOB_TTL            seconds to keep finished jobs (default 3600)
   ALLOWED_URL_HOSTS  comma-separated hosts, or * for any (default: YouTube hosts)
-  ACCESS_TOKEN       if set, /api/jobs requires header X-Access-Token
+  ACCESS_TOKEN       if set, /api/jobs and /api/projects require header X-Access-Token
   YT_COOKIES         contents of a cookies.txt, for when YouTube asks to sign in
   ANTHROPIC_API_KEY  for POST /api/plans (Claude writes the script)
   RENDER_BACKEND     auto (default), sprite, local or none
   SPRITES_TOKEN      Fly.io Sprites token: renders run on a Sprite (SPRITE_NAME, default rav-render)
   RENDER_WORKERS     renders at once (default 1)
+  AZURE_KEYVAULT_URL, AZURE_TENANT_ID, AZURE_CLIENT_ID, AZURE_CLIENT_SECRET
+                     Key Vault that holds the storage connection string (see storage.py)
+  AZURE_STORAGE_CONNECTION_STRING   alternative to Key Vault, for local runs
 """
 from __future__ import annotations
 
@@ -50,6 +58,7 @@ from fastapi.responses import FileResponse, JSONResponse
 
 import create_video as cv
 import reverse_video as rv
+import storage
 
 ROOT = Path(__file__).resolve().parent
 DOCS = ROOT / "docs"
@@ -80,6 +89,19 @@ pool = ThreadPoolExecutor(max_workers=WORKERS)
 render_pool = ThreadPoolExecutor(max_workers=int(os.environ.get("RENDER_WORKERS", "1")))
 jobs: dict[str, dict] = {}
 lock = threading.Lock()
+_store: storage.ProjectStore | None = None
+_store_lock = threading.Lock()
+
+
+def get_store() -> storage.ProjectStore:
+    """The Azure project store, created on first use (it contacts Key Vault and Azure)."""
+    global _store
+    if not storage.configured():
+        raise storage.StorageError("Azure storage is not configured on this server.")
+    with _store_lock:
+        if _store is None:
+            _store = storage.ProjectStore.from_env()
+    return _store
 
 
 def capabilities() -> dict:
@@ -88,6 +110,7 @@ def capabilities() -> dict:
             "cookies": COOKIES is not None, "auth_required": ACCESS_TOKEN is not None,
             "llm": bool(os.environ.get("ANTHROPIC_API_KEY") or os.environ.get("ANTHROPIC_AUTH_TOKEN")),
             "model": cv.MODEL, "render_backend": cv.pick_backend(), "fonts": cv.FONTS, "aspects": list(cv.ASPECTS),
+            "azure_storage": storage.configured(),
             "max_upload_mb": MAX_UPLOAD // (1024 * 1024), "max_duration_s": MAX_DURATION,
             "allowed_url_hosts": sorted(ALLOWED), "queued_or_running": sum(j["status"] in ("queued", "running") for j in jobs.values())}
 
@@ -133,7 +156,7 @@ def _cleanup():
 
 
 def _work(job_id: str, source: str | None, transcript: str | None, video: Path | None, download: bool,
-          title: str | None):
+          title: str | None, project: str | None = None):
     job = jobs[job_id]
     job.update(status="running", started=time.time())
     try:
@@ -143,8 +166,13 @@ def _work(job_id: str, source: str | None, transcript: str | None, video: Path |
         for f in out.iterdir():                      # keep outputs, drop large media
             if f.name not in OUTPUT_FILES:
                 f.unlink(missing_ok=True)
-        job.update(status="done", result={"analysis": result["analysis"], "frames": result["frames"],
-                                          "has_transcript": result["has_transcript"], "has_video": result["has_video"]})
+        saved = []
+        if project:
+            job["log"].append(f"saving outputs to project {project}")
+            saved = get_store().save_outputs(project, job_id, out, sorted(OUTPUT_FILES))
+        job.update(status="done", project=project, saved_to=saved,
+                   result={"analysis": result["analysis"], "frames": result["frames"],
+                           "has_transcript": result["has_transcript"], "has_video": result["has_video"]})
     except Exception as e:  # noqa: BLE001 - report every failure to the client
         job.update(status="error", error=f"{type(e).__name__}: {e}")
     finally:
@@ -156,12 +184,16 @@ def _work(job_id: str, source: str | None, transcript: str | None, video: Path |
 @app.post("/api/jobs", status_code=202)
 def create_job(url: str = Form(""), download: bool = Form(False), transcript: str = Form(""), title: str = Form(""),
                transcript_file: UploadFile | None = File(None), video: UploadFile | None = File(None),
-               x_access_token: str | None = Header(None)):
+               project: str = Form(""), x_access_token: str | None = Header(None)):
     _check_token(x_access_token)
     _cleanup()
     url = url.strip()
     if url:
         _check_url(url)
+    project = project.strip() or None
+    if project:
+        if get_store().get_project(project) is None:
+            raise HTTPException(404, f"No project called '{project}'. Create it first with POST /api/projects.")
     text = transcript.strip() or None
     if transcript_file is not None and transcript_file.filename:
         text = transcript_file.file.read(5 * 1024 * 1024).decode("utf-8", errors="replace")
@@ -183,12 +215,12 @@ def create_job(url: str = Form(""), download: bool = Form(False), transcript: st
     with lock:
         jobs[job_id] = {"id": job_id, "status": "queued", "created": time.time(), "dir": str(job_dir),
                         "log": [], "error": None, "result": None, "finished": None}
-    pool.submit(_work, job_id, url or None, text, video_path, download and bool(url), title.strip() or None)
-    return {"id": job_id, "status": "queued", "status_url": f"/api/jobs/{job_id}"}
+    pool.submit(_work, job_id, url or None, text, video_path, download and bool(url), title.strip() or None, project)
+    return {"id": job_id, "status": "queued", "status_url": f"/api/jobs/{job_id}", "project": project}
 
 
 def _public(job: dict) -> dict:
-    out = {k: job[k] for k in ("id", "status", "log", "error", "result")}
+    out = {k: job.get(k) for k in ("id", "status", "log", "error", "result", "project", "saved_to")}
     if job["status"] == "done":
         d = Path(job["dir"])
         out["files"] = {name: f"/api/jobs/{job['id']}/files/{name}" for name in OUTPUT_FILES if (d / name).exists()}
@@ -316,6 +348,32 @@ def create_render(plan: str = Form(...), touches: str = Form("{}"), metrics: str
         logo_path.write_bytes(data)
     render_pool.submit(_work_render, job, p, t, m, logo_path, quality)
     return {"id": job["id"], "status": "queued", "status_url": f"/api/jobs/{job['id']}"}
+@app.post("/api/projects", status_code=201)
+def create_project(name: str = Form(""), x_access_token: str | None = Header(None)):
+    _check_token(x_access_token)
+    if not name.strip():
+        raise HTTPException(400, "Send a project name.")
+    try:
+        return get_store().create_project(name)
+    except storage.ProjectExists as e:
+        raise HTTPException(409, str(e))
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+
+
+@app.get("/api/projects")
+def list_projects(x_access_token: str | None = Header(None)):
+    _check_token(x_access_token)
+    return {"projects": get_store().list_projects()}
+
+
+@app.get("/api/projects/{slug}")
+def get_project(slug: str, x_access_token: str | None = Header(None)):
+    _check_token(x_access_token)
+    project = get_store().get_project(slug)
+    if project is None:
+        raise HTTPException(404, f"No project called '{slug}'.")
+    return project
 
 
 @app.get("/")
@@ -331,3 +389,8 @@ def thumbnail():
 @app.exception_handler(HTTPException)
 def http_error(_, exc: HTTPException):
     return JSONResponse({"error": exc.detail}, status_code=exc.status_code)
+
+
+@app.exception_handler(storage.StorageError)
+def storage_error(_, exc: storage.StorageError):
+    return JSONResponse({"error": str(exc)}, status_code=503)

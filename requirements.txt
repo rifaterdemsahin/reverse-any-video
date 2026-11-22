@@ -13,3 +13,7 @@ youtube-transcript-api>=1.2    # caption fallback
 anthropic>=2.12                # Claude writes the new video's script (create_video.py)
 sprites-py>=0.7.2              # Fly.io Sprites: remote HyperFrames renders
 # Rendering itself uses the hyperframes npm package (Node 22+, FFmpeg, Chrome) on a Sprite or locally.
+# Azure: project folders and outputs in Blob Storage, connection string read from Key Vault (storage.py)
+azure-storage-blob>=12.19,<13
+azure-keyvault-secrets>=4.8,<5
+azure-identity>=1.15,<2

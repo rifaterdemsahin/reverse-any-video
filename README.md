@@ -13,6 +13,12 @@ Starting base: [How to reverse engineer any editing style (Turned it into a skil
 by Taha El Harti. This repo is an independent, open implementation of the `/reverse-any-video` idea from that
 video. See [`examples/KnqTiAXUH7M`](examples/KnqTiAXUH7M) for what has been captured from it so far.
 
+## Links
+
+- **Live app:** https://reverse-any-video.fly.dev/
+- **First test video:** https://www.youtube.com/watch?v=KnqTiAXUH7M
+- **First test output:** [`examples/KnqTiAXUH7M`](examples/KnqTiAXUH7M): `script.md`, `SKILL.md`, `analysis.json`, `report.html`
+
 ## What it measures
 
 | From the transcript | From the video file (ffmpeg) |
@@ -146,6 +152,35 @@ curl -F video=@clip.mp4 -F transcript_file=@clip.srt https://<app>.fly.dev/api/j
 curl -F brief="..." -F metrics=@metrics.json -F touches='{"brand":"Acme"}' https://<app>.fly.dev/api/plans
 curl -F plan=@plan.json -F touches='{"brand":"Acme"}' -F logo=@logo.png https://<app>.fly.dev/api/renders
 ```
+
+### Projects and Azure storage
+
+A project is a folder for one video's analyses. Every project lives in one Azure Blob container
+(`reverse-any-video`), each in its own folder:
+
+```
+reverse-any-video/
+  projects/<slug>/project.json            the project record
+  projects/<slug>/jobs/<job_id>/*.md, *.json, report.html, SKILL.md
+```
+
+```bash
+curl -H "X-Access-Token: $TOKEN" -F name="Hook study" https://<app>.fly.dev/api/projects        # create
+curl -H "X-Access-Token: $TOKEN" https://<app>.fly.dev/api/projects                            # list
+curl -H "X-Access-Token: $TOKEN" -F url="https://www.youtube.com/watch?v=KnqTiAXUH7M" \
+     -F download=true -F project=hook-study https://<app>.fly.dev/api/jobs                      # analyse into the project
+```
+
+The connection string is kept in Azure Key Vault. The server reads it with the service principal set in
+`AZURE_TENANT_ID`, `AZURE_CLIENT_ID` and `AZURE_CLIENT_SECRET`, from the vault in `AZURE_KEYVAULT_URL`
+(secret name `reverse-any-video-storage-connection-string`). Without these the project endpoints return 503
+and jobs run as before, saving nothing.
+
+The resources, their current status and the commands to finish the setup are in
+[`docs/azure-setup.md`](docs/azure-setup.md).
+
+To run this on your own Fly.io and Azure account, follow the step-by-step guide:
+https://claude.ai/artifact/EJqZnm3wE3EAVvwidFTuFA (private until you share it).
 
 ## Tests
 
