@@ -14,7 +14,7 @@ COPY requirements.txt .
 RUN pip install -r requirements.txt
 
 COPY reverse_video.py create_video.py server.py storage.py deepinfra.py reverse_llm.py template.py pricing.py vault.py gmail.py ./
-COPY docs/index.html docs/setup.html docs/pricing.html docs/landing.html docs/start.html docs/menu.js docs/thumbnail.jpg ./docs/
+COPY docs/index.html docs/setup.html docs/pricing.html docs/landing.html docs/start.html docs/settings.html docs/menu.js docs/thumbnail.jpg ./docs/
 
 RUN useradd --create-home --uid 10001 app && mkdir -p /tmp/rav-jobs && chown app /tmp/rav-jobs
 USER app

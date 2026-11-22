@@ -8,6 +8,7 @@
     { href: "/pricing", label: "💷 Pricing" },
     { href: "/setup", label: "🧭 Setup guide" },
     { href: "/api/docs", label: "🔌 API docs" },
+    { href: "/settings", label: "⚙️ Settings" },
     { href: "/healthz", label: "💚 Status" },
     { href: "https://claude.ai/artifact/EJqZnm3wE3EAVvwidFTuFA", label: "📘 Guide (print)", ext: true },
     { href: "https://github.com/rifaterdemsahin/reverse-any-video", label: "🐙 Source", ext: true },

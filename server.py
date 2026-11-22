@@ -407,6 +407,11 @@ def start():
     return FileResponse(DOCS / "start.html", media_type="text/html")
 
 
+@app.get("/settings")
+def settings_page():
+    return FileResponse(DOCS / "settings.html", media_type="text/html")
+
+
 @app.get("/menu.js")
 def menu_js():
     return FileResponse(DOCS / "menu.js", media_type="application/javascript")

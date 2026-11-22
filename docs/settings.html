@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="claude:viewport-fit-sides" content="cover">
+<title>Settings and access token</title>
+<style>
+:root { --bg: #f7f6f2; --fg: #1d1d1b; --muted: #5d5b55; --rule: #dcd9cf; --card: #fff; --accent: #0f6e5c; --code-bg: #1e2321; --code-fg: #e9f1ee; --warn: #8a4b00;
+  --sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif; --mono: ui-monospace, Menlo, Consolas, monospace; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bg: #121412; --fg: #ecebe6; --muted: #aeaca3; --rule: #2e332f; --card: #1a1d1b; --accent: #5fd0b5; --code-bg: #0b0d0c; --code-fg: #d7e6e0; --warn: #f0b36a; color-scheme: dark; } }
+:root[data-theme="dark"] { --bg: #121412; --fg: #ecebe6; --muted: #aeaca3; --rule: #2e332f; --card: #1a1d1b; --accent: #5fd0b5; --code-bg: #0b0d0c; --code-fg: #d7e6e0; --warn: #f0b36a; color-scheme: dark; }
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--fg); font: 16px/1.6 var(--sans);
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 28px; }
+main { max-width: 880px; margin: 0 auto; }
+h1 { font-size: clamp(1.7rem, 5vw, 2.3rem); margin: 0 0 .4rem; }
+h2 { font-size: 1.25rem; margin: 2.2rem 0 .6rem; padding-top: .8rem; border-top: 1px solid var(--rule); }
+h3 { font-size: 1rem; margin: 1.2rem 0 .3rem; }
+.lede, .muted { color: var(--muted); }
+.card { background: var(--card); border: 1px solid var(--rule); border-radius: 10px; padding: 16px 18px; margin: 12px 0; }
+.warn { color: var(--warn); }
+pre { background: var(--code-bg); color: var(--code-fg); padding: 12px 14px; border-radius: 8px; overflow-x: auto; font: 13px/1.5 var(--mono); white-space: pre; }
+code { font-family: var(--mono); font-size: .92em; }
+table { width: 100%; border-collapse: collapse; font-size: .94rem; display: block; overflow-x: auto; }
+th, td { text-align: left; padding: 8px 8px; border-bottom: 1px solid var(--rule); vertical-align: top; }
+th { color: var(--muted); font-weight: 600; }
+a { color: var(--accent); }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+</style>
+</head>
+<body>
+<main>
+  <div id="site-menu"></div>
+
+  <h1>⚙️ Settings and the access token</h1>
+  <p class="lede">Where each setting lives, what it does and what it changes. This page holds no secret values.</p>
+
+  <h2>🔑 The access token</h2>
+  <p>The token is a password for the analyzer. It is set on the server as the secret <code>ACCESS_TOKEN</code>. Fly.io never shows a secret after it is set, so you cannot copy it back from there.</p>
+  <div class="card">
+    <h3>Where to find it</h3>
+    <ol>
+      <li>If you saved it, it is in your password manager, under the name you gave it (for example "reverse-any-video token").</li>
+      <li>Fly.io lists the secret's name and date, not its value: <a href="https://fly.io/apps/reverse-any-video/secrets" target="_blank" rel="noopener">fly.io/apps/reverse-any-video/secrets</a>.</li>
+      <li>If you have lost it, set a new one (below). This replaces the old one, and anything using the old token stops working.</li>
+    </ol>
+    <h3>Set a new token</h3>
+    <pre>TOKEN=$(openssl rand -hex 24) && fly secrets set --app reverse-any-video ACCESS_TOKEN=$TOKEN && echo "$TOKEN" | pbcopy && echo copied</pre>
+    <p class="warn">Keep the token private. Anyone with it can start analyses and create projects, which costs money. Do not put it in the page, the repo or chat.</p>
+    <h3>Use it in the analyzer</h3>
+    <p>Open the analyzer, paste the token into the Access token box in the server panel once. The browser keeps it for next time. Another browser or a private window asks again.</p>
+  </div>
+
+  <h2>🧩 Settings the server reads</h2>
+  <p class="muted">Set them with <code>fly secrets set --stage --app reverse-any-video NAME=value</code>, then <code>fly deploy --ha=false</code>. Settings without a secret can be set in <code>fly.toml</code> under <code>[env]</code>.</p>
+
+  <h3>Access and storage</h3>
+  <table>
+    <tr><th>Setting</th><th>What it does</th><th>Default</th></tr>
+    <tr><td><code>ACCESS_TOKEN</code> (secret)</td><td>Password for the analyzer, the projects and the jobs API.</td><td>none, which means open</td></tr>
+    <tr><td><code>AZURE_KEYVAULT_URL</code></td><td>The Key Vault that holds the secrets below.</td><td>none</td></tr>
+    <tr><td><code>AZURE_TENANT_ID</code>, <code>AZURE_CLIENT_ID</code>, <code>AZURE_CLIENT_SECRET</code> (secret)</td><td>The app's Azure service principal, used to read Key Vault.</td><td>none</td></tr>
+    <tr><td><code>AZURE_STORAGE_CONNECTION_STRING</code> (secret)</td><td>Storage connection string. Use this only for local runs. Fly reads it from Key Vault.</td><td>none</td></tr>
+    <tr><td><code>AZURE_STORAGE_CONTAINER</code></td><td>Container name for projects and internal files.</td><td><code>reverse-any-video</code></td></tr>
+    <tr><td><code>AZURE_STORAGE_SECRET_NAME</code></td><td>Key Vault secret name for the connection string.</td><td><code>reverse-any-video-storage-connection-string</code></td></tr>
+  </table>
+
+  <h3>AI models</h3>
+  <table>
+    <tr><th>Setting</th><th>What it does</th><th>Default</th></tr>
+    <tr><td><code>DEEPINFRA_API_KEY</code> (secret)</td><td>Turns on the storyboard and the EDL clip names. Without it, the measured outputs still work.</td><td>off</td></tr>
+    <tr><td><code>DEEPINFRA_VISION_MODEL</code></td><td>Model that reads the frames.</td><td><code>Qwen/Qwen2.5-VL-32B-Instruct</code></td></tr>
+    <tr><td><code>DEEPINFRA_TEXT_MODEL</code></td><td>Model that writes the text.</td><td><code>meta-llama/Llama-3.3-70B-Instruct</code></td></tr>
+    <tr><td><code>DEEPINFRA_BASE_URL</code></td><td>API address. Change only if DeepInfra moves it.</td><td><code>https://api.deepinfra.com/v1/openai</code></td></tr>
+    <tr><td><code>STORYBOARD_SHOTS</code></td><td>How many shots get a storyboard panel, spread evenly.</td><td>40</td></tr>
+    <tr><td><code>STORYBOARD_BATCH</code></td><td>Shots sent to the vision model per request.</td><td>8</td></tr>
+    <tr><td><code>YT_COOKIES</code> (secret)</td><td>Browser cookies for YouTube. Needed only when YouTube asks the server to sign in.</td><td>none</td></tr>
+  </table>
+
+  <h3>Limits and performance</h3>
+  <table>
+    <tr><th>Setting</th><th>What it does</th><th>Default</th></tr>
+    <tr><td><code>WORKERS</code></td><td>Analyses that run at once.</td><td>2</td></tr>
+    <tr><td><code>MAX_UPLOAD_MB</code></td><td>Largest uploaded video, in MB.</td><td>300</td></tr>
+    <tr><td><code>MAX_DURATION</code></td><td>Longest video the server will accept, in seconds.</td><td>1800</td></tr>
+    <tr><td><code>JOB_TTL</code></td><td>Seconds to keep finished jobs before they are removed.</td><td>3600</td></tr>
+    <tr><td><code>ALLOWED_URL_HOSTS</code></td><td>Sites that can be given as links. Leave as YouTube only.</td><td>YouTube hosts</td></tr>
+    <tr><td><code>DATA_DIR</code></td><td>Where job files are kept on the server.</td><td><code>/tmp/rav-jobs</code></td></tr>
+  </table>
+
+  <h3>Pricing</h3>
+  <table>
+    <tr><th>Setting</th><th>What it does</th><th>Default</th></tr>
+    <tr><td><code>PRICE_MARGIN</code></td><td>Margin on our costs. 0.10 means 10%.</td><td>0.10</td></tr>
+    <tr><td><code>FX_GBP_USD</code></td><td>Dollars per pound, for the Azure storage cost. Set it to today's rate.</td><td>1.27</td></tr>
+    <tr><td><code>STRIPE_FEE_PERCENT</code></td><td>Card fee, percentage part, used in the estimate. Check it against your Stripe plan.</td><td>0.015</td></tr>
+    <tr><td><code>STRIPE_FEE_FIXED</code></td><td>Card fee, fixed part in dollars, used in the estimate.</td><td>0.20</td></tr>
+  </table>
+
+  <h3>Rendering and other services</h3>
+  <table>
+    <tr><th>Setting</th><th>What it does</th><th>Default</th></tr>
+    <tr><td><code>RENDER_BACKEND</code></td><td>Where HyperFrames renders: <code>auto</code>, <code>sprite</code>, <code>local</code> or <code>none</code>.</td><td><code>auto</code></td></tr>
+    <tr><td><code>SPRITES_TOKEN</code> (secret)</td><td>Fly.io Sprites token, for rendering on a Sprite.</td><td>none</td></tr>
+    <tr><td><code>SPRITE_NAME</code></td><td>Name of the Sprite used for renders.</td><td><code>rav-render</code></td></tr>
+    <tr><td><code>RENDER_WORKERS</code></td><td>Renders that run at once.</td><td>1</td></tr>
+    <tr><td><code>ANTHROPIC_API_KEY</code> (secret)</td><td>Claude, for writing new scripts in the Create section.</td><td>off</td></tr>
+    <tr><td><code>CLAUDE_MODEL</code></td><td>Claude model for the Create section.</td><td><code>claude-opus-5-5</code></td></tr>
+  </table>
+
+  <h2>✅ Quick checks</h2>
+  <div class="card">
+    <p>Health and what is switched on: <a href="/healthz">/healthz</a>. Look for <code>auth_required</code>, <code>azure_storage</code> and <code>deepinfra</code>.</p>
+    <p>Price check: <a href="/api/quote?duration_s=300">/api/quote?duration_s=300</a>.</p>
+  </div>
+</main>
+<script src="/menu.js" defer></script>
+</body>
+</html>
